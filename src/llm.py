@@ -12,7 +12,7 @@ class LLM:
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             model_name, trust_remote_code=True
         )
-        self.config.init_device = "cpu"
+        self.config.init_device = device
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
             model_name,
             config=self.config,
@@ -31,7 +31,7 @@ class LLM:
         for k, t in enumerate(input_tokens):
             tokens[k, : len(t)] = t.clone().detach().long()
 
-        logits = self.model.forward(tokens[:, :prompt_len].to(self.device)).logits
+        logits = self.model.forward(tokens[:, :prompt_len]).logits
         top_k_ids = torch.topk(logits[:, -1], top_k).indices[0]
         top_k_ids = top_k_ids.unsqueeze(1)
         return top_k_ids if not decode else self.tokenizer.batch_decode(top_k_ids)

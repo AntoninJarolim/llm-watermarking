@@ -1,3 +1,5 @@
+from pprint import pprint
+
 import torch
 
 from llm import LLM
@@ -24,13 +26,17 @@ if __name__ == "__main__":
 
     prompts = [
         'Rád bych, milí moji, také věděl, jak se dostat za',
-        'Rád bych také věděl, jak se dostat do',
+        'Rád bych také věděl, jak se dostat do nebo za',
         'Rád bych také věděl, jak se dostat před',
+        'Není mi jasné, jak se dostat za tvoji mamku protoze',
+        'Těžko říci, jak se dostat za nebo i před a taky pod',
+        'Ale není mi jasné, jak se dostat za, u nebo i před',
     ]
 
-    print(
-        llm_model.next_token_text(
-            prompts,
-            decode=True,
-        )
+    texts = llm_model.generate_text(
+        prompts,
+        max_length=150
     )
+
+    for x in texts:
+        print(x, end="\n\n")

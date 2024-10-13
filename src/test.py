@@ -23,14 +23,16 @@ if __name__ == "__main__":
     llm_model = LLM(args.model_name, device=device)
 
     prompts = [
-        'Rád bych také věděl, jak se dostat za',
+        'Rád bych, milí moji, také věděl, jak se dostat za',
         'Rád bych také věděl, jak se dostat do',
         'Rád bych také věděl, jak se dostat před',
     ]
 
     tokenized_prompts = llm_model.tokenizer(
         prompts,
-        padding=True,
+        truncation=True,
+        padding='max_length',  # Pads tokens to the max_length
+        max_length=256,        # The specific max length you want
         return_tensors="pt").input_ids
     print(
         llm_model.next_token(

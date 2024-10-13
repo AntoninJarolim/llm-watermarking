@@ -22,16 +22,18 @@ class LLM:
         self.model = self.model.eval()
         for param in self.model.parameters():
             param.requires_grad = False
+        self.pad_token_id = self.tokenizer.pad_token_id
 
     # Possibly use text as input rather than tokens
     def next_token(self, input_tokens, top_k=10, decode=False):
-        pad_id = self.model.config.pad_token_id if self.model.config.pad_token_id else 0
-        tokens = torch.full((len(input_tokens), 250), pad_id).to(self.device).long()
+        input_tokens = input_tokens.to(self.device)
+
+        # Pad all input tokens to the length of the shortest input
         min_prompt_len = min(map(len, input_tokens))
         for k, t in enumerate(input_tokens):
-            tokens[k, : min_prompt_len] = t.clone().detach().long()
+            input_tokens[k, min_prompt_len:] = self.pad_token_id
 
-        logits = self.model.forward(tokens[:, :min_prompt_len]).logits
+        logits = self.model.forward(input_tokens[:, :min_prompt_len]).logits
         top_k_ids = torch.topk(logits[:, -1], top_k).indices
         return top_k_ids if not decode else self.tokenizer.batch_decode(top_k_ids)
 

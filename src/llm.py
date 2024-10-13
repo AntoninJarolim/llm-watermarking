@@ -37,6 +37,12 @@ class LLM:
         top_k_ids = torch.topk(logits[:, -1], top_k).indices
         return top_k_ids if not decode else self.tokenizer.batch_decode(top_k_ids)
 
-    def next_token_text(self, text, top_k=10, decode=False):
-        input_tokens = self.tokenizer.encode(text, return_tensors="pt")
+    def next_token_text(self, texts, top_k=10, decode=False):
+        input_tokens = self.tokenizer(
+            texts,
+            truncation=True,
+            padding='max_length',
+            max_length=256,
+            return_tensors="pt").input_ids
         return self.next_token(input_tokens, top_k, decode)
+

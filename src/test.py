@@ -28,15 +28,9 @@ if __name__ == "__main__":
         'Rád bych také věděl, jak se dostat před',
     ]
 
-    tokenized_prompts = llm_model.tokenizer(
-        prompts,
-        truncation=True,
-        padding='max_length',  # Pads tokens to the max_length
-        max_length=256,        # The specific max length you want
-        return_tensors="pt").input_ids
     print(
-        llm_model.next_token(
-            tokenized_prompts,
+        llm_model.next_token_text(
+            prompts,
             decode=True,
         )
     )

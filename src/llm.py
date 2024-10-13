@@ -26,14 +26,13 @@ class LLM:
     # Possibly use text as input rather than tokens
     def next_token(self, input_tokens, top_k=10, decode=False):
         pad_id = self.model.config.pad_token_id if self.model.config.pad_token_id else 0
-        tokens = torch.full((1, 250), pad_id).to(self.device).long()
-        prompt_len = len(input_tokens[0])
+        tokens = torch.full((len(input_tokens), 250), pad_id).to(self.device).long()
+        min_prompt_len = min(map(len, input_tokens))
         for k, t in enumerate(input_tokens):
-            tokens[k, : len(t)] = t.clone().detach().long()
+            tokens[k, : min_prompt_len] = t.clone().detach().long()
 
-        logits = self.model.forward(tokens[:, :prompt_len]).logits
-        top_k_ids = torch.topk(logits[:, -1], top_k).indices[0]
-        top_k_ids = top_k_ids.unsqueeze(1)
+        logits = self.model.forward(tokens[:, :min_prompt_len]).logits
+        top_k_ids = torch.topk(logits[:, -1], top_k).indices
         return top_k_ids if not decode else self.tokenizer.batch_decode(top_k_ids)
 
     def next_token_text(self, text, top_k=10, decode=False):

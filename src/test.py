@@ -21,9 +21,20 @@ if __name__ == "__main__":
     args = get_args()
     device = "cuda:0" if torch.cuda.is_available() and not args.force_cpu else "cpu"
     llm_model = LLM(args.model_name, device=device)
+
+    prompts = [
+        'Rád bych také věděl, jak se dostat za',
+        'Rád bych také věděl, jak se dostat do',
+        'Rád bych také věděl, jak se dostat před',
+    ]
+
+    tokenized_prompts = llm_model.tokenizer(
+        prompts,
+        padding=True,
+        return_tensors="pt").input_ids
     print(
         llm_model.next_token(
-            llm_model.tokenizer.encode("Hello, my name is", return_tensors="pt"),
+            tokenized_prompts,
             decode=True,
         )
     )

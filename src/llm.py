@@ -3,7 +3,10 @@ import sys
 import numpy as np
 import transformers
 import torch
+import tqdm
+import numpy as np
 
+import utils
 
 class LLM:
     def __init__(self, model_name, device="cpu"):
@@ -16,6 +19,7 @@ class LLM:
             model_name, trust_remote_code=True
         )
         self.vocab_size = self.config.vocab_size
+        self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         self.config.init_device = device
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -51,7 +55,7 @@ class LLM:
         min_prompt_len = min((input_tokens == self.pad_token_id).type(torch.int).argmax(1))
         input_tokens[:, min_prompt_len:] = self.pad_token_id
 
-        for current_position in range(min_prompt_len, max_length):
+        for current_position in tqdm.tqdm(range(min_prompt_len, max_length)):
             # Generate the next token logits
             next_token_logits = self.next_token_logits(input_tokens, current_position)
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
@@ -85,3 +89,49 @@ class UnigramWatermarkedLLM(LLM):
     def select_next_token(self, next_token_logits):
         next_token_logits[:, self.green] += self.wm_strength
         return super().select_next_token(next_token_logits)
+
+class LLM_Gumbel(LLM):
+    def __init__(
+        self,
+        model_name,
+        device="cpu",
+        temperature=1.0,
+        watermark_key_len=256,
+        shift_max=0,
+        seed=69,
+    ):
+        super().__init__(model_name, device)
+        self.temperature = temperature
+        self.rng = torch.Generator(device=device)
+        self.watermark_key_len = watermark_key_len
+        self.shift_max = shift_max
+        self.rng.manual_seed(seed)
+        self.xis = [
+            utils.inv_gumbel_cdf(torch.rand(self.vocab_size, generator=self.rng))
+            for _ in range(self.watermark_key_len)
+        ]
+
+    def _get_unique_id(self, batch_size):
+        return np.random.randint(self.shift_max + 1, size=batch_size)
+
+    def _key_func(self, r):
+        xis = [self.xis[i] for i in r]
+        return xis
+
+    def _gamma(self, xis, logits, temperature=0.1, top_p=1.0):
+        if temperature > 0:
+            xis = torch.stack(xis).to(self.device)
+            probs = utils.top_p(logits + xis, temperature, top_p, self.device)
+            next_token = torch.multinomial(probs, num_samples=1)
+        else:
+            next_token = torch.argmax(xis + logits, dim=-1)
+
+        next_token = next_token.squeeze()
+        return next_token
+
+    def select_next_token(self, next_token_logits):
+        batch_size = next_token_logits.size(0)
+        uid = self._get_unique_id(batch_size)
+        xi = self._key_func(uid)
+        next_tokens = self._gamma(xi, next_token_logits, self.temperature, 1.0)
+        return next_tokens

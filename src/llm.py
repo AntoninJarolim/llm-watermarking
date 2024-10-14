@@ -67,18 +67,18 @@ class LLM:
 class UnigramWatermarkedLLM(LLM):
     def __init__(self, model_name, device="cpu", green_list_size=0.5, wm_strength=2, wm_key=None):
         super().__init__(model_name, device)
-        rng = np.random.default_rng()
-
         self.wm_strength = wm_strength
-
         self.watermark_key = wm_key if wm_key is not None else np.random.SeedSequence().entropy
+
+        # Split the vocabulary into green and red lists
         rng = np.random.default_rng(self.watermark_key)
         vocab_indices_rnd = rng.permutation(np.arange(self.vocab_size))
         split_index = int(self.vocab_size * green_list_size)
         self.green, self.red = np.split(vocab_indices_rnd, [split_index])
         self.green = torch.sort(torch.tensor(self.green, dtype=torch.int64)).indices.to(device)
 
-        print(f"Watermark key: {self.watermark_key}")
+    def __str__(self):
+        print(f"UnigramWatermarkedLLM with watermark key: {self.watermark_key}")
         print(f"Green list: {self.green}")
         print(f"Red list: {self.red}")
 

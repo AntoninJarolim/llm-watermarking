@@ -1,3 +1,6 @@
+import sys
+
+import numpy as np
 import transformers
 import torch
 
@@ -12,6 +15,7 @@ class LLM:
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             model_name, trust_remote_code=True
         )
+        self.vocab_size = self.config.vocab_size
         self.config.init_device = device
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -58,3 +62,26 @@ class LLM:
 
     def select_next_token(self, next_token_logits):
         return torch.argmax(next_token_logits, dim=-1)
+
+
+class UnigramWatermarkedLLM(LLM):
+    def __init__(self, model_name, device="cpu", green_list_size=0.5, wm_strength=2, wm_key=None):
+        super().__init__(model_name, device)
+        rng = np.random.default_rng()
+
+        self.wm_strength = wm_strength
+
+        self.watermark_key = wm_key if wm_key is not None else np.random.SeedSequence().entropy
+        rng = np.random.default_rng(self.watermark_key)
+        vocab_indices_rnd = rng.permutation(np.arange(self.vocab_size))
+        split_index = int(self.vocab_size * green_list_size)
+        self.green, self.red = np.split(vocab_indices_rnd, [split_index])
+        self.green = torch.sort(torch.tensor(self.green, dtype=torch.int64)).indices.to(device)
+
+        print(f"Watermark key: {self.watermark_key}")
+        print(f"Green list: {self.green}")
+        print(f"Red list: {self.red}")
+
+    def select_next_token(self, next_token_logits):
+        next_token_logits[:, self.green] += self.wm_strength
+        return super().select_next_token(next_token_logits)

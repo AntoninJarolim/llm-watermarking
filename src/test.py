@@ -2,7 +2,7 @@ from pprint import pprint
 
 import torch
 
-from llm import LLM
+from llm import LLM, UnigramWatermarkedLLM
 import argparse
 
 
@@ -38,5 +38,15 @@ if __name__ == "__main__":
         max_length=150
     )
 
-    for x in texts:
-        print(x, end="\n\n")
+    del llm_model
+
+    llm_model_w = UnigramWatermarkedLLM(args.model_name, device=device, wm_strength=3)
+    texts_w = llm_model_w.generate_text(
+        prompts,
+        max_length=150
+    )
+
+    for x, x_w in zip(texts, texts_w):
+        pprint(x)
+        pprint(x_w)
+        print()

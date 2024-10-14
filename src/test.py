@@ -2,7 +2,7 @@ from pprint import pprint
 
 import torch
 
-from llm import LLM, UnigramWatermarkedLLM
+from llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
 import argparse
 
 
@@ -16,6 +16,8 @@ def get_args():
                         action="store_true",
                         help="Force CPU usage")
 
+    parser.add_argument("--max_length", type=int, default=150)
+    parser.add_argument("--watermark_name", type=str, default="unigram")
     return parser.parse_args()
 
 
@@ -40,11 +42,19 @@ if __name__ == "__main__":
 
     del llm_model
 
-    llm_model_w = UnigramWatermarkedLLM(model_name=args.model_name, device=device, wm_strength=3, top_p=0.9)
-    texts_w = llm_model_w.generate_text(
-        prompts,
-        max_length=150
-    )
+    if args.watermark_name == "unigram":
+        llm_model_w = UnigramWatermarkedLLM(
+            model_name=args.model_name, device=device, wm_strength=3, top_p=0.9
+        )
+    elif args.watermark_name == "gumbel":
+        llm_model_w = GumbelWatermarkedLLM(
+            model_name=args.model_name, device=device, top_p=0.9
+        )
+    else:
+        raise ValueError(
+            f"Unknown watermark name: {args.watermark_name}, choose from 'unigram' or 'gumbel'"
+        )
+    texts_w = llm_model_w.generate_text(prompts, max_length=args.max_length)
 
     for x, x_w in zip(texts, texts_w):
         pprint(x)

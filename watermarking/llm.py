@@ -3,7 +3,7 @@ import torch
 import tqdm
 import numpy as np
 
-import utils
+import watermarking.utils as utils
 
 
 class LLM:

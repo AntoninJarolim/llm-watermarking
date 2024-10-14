@@ -2,7 +2,7 @@ from pprint import pprint
 
 import torch
 
-from llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
+from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
 import argparse
 
 

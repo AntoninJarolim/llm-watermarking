@@ -1,5 +1,5 @@
 import numpy as np
-from src.llm import UnigramWatermarkedLLM
+from watermarking.llm import UnigramWatermarkedLLM
 
 
 def test_unigram_watermarked_llm():
@@ -33,5 +33,6 @@ def test_unigram_watermarked_llm():
     print("UnigramWatermarkedLLM tests passed!")
 
 
-if __name__ == '__main__':
+def main():
     test_unigram_watermarked_llm()
+

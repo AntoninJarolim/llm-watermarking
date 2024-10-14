@@ -13,6 +13,8 @@ def top_p(logits, temperature, top_p, device):
     sorted_probs[mask] = 0
     sorted_probs.div_(sorted_probs.sum(dim=-1, keepdim=True))
     next_tok_probs = (
-        torch.zeros(logits.shape).to(device).scatter(-1, sorted_indices, sorted_probs)
+        torch.zeros(logits.shape, dtype=sorted_probs.dtype)
+        .to(device)
+        .scatter(-1, sorted_indices, sorted_probs)
     )
     return next_tok_probs

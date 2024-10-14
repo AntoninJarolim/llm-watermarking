@@ -1,17 +1,17 @@
-import sys
-
-import numpy as np
 import transformers
 import torch
 import tqdm
 import numpy as np
 
-import utils
+import src.utils as utils
+
 
 class LLM:
-    def __init__(self, model_name, device="cpu"):
+    def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
         self.device = device
         self.name = model_name
+        self.temperature = temperature
+        self.top_p = top_p
         self.config = transformers.AutoConfig.from_pretrained(
             model_name, trust_remote_code=True
         )
@@ -32,7 +32,6 @@ class LLM:
             param.requires_grad = False
         self.pad_token_id = self.tokenizer.pad_token_id
 
-    # Possibly use text as input rather than tokens
     def next_token_logits(self, input_tokens, current_position):
         logits = self.model.forward(input_tokens[:, :current_position]).logits
         return logits
@@ -65,14 +64,20 @@ class LLM:
         return self.decode_output(input_tokens)
 
     def select_next_token(self, next_token_logits):
-        return torch.argmax(next_token_logits, dim=-1)
+        if self.temperature > 0:
+            probs = utils.top_p(next_token_logits, self.temperature, self.top_p, self.device)
+            next_token = torch.multinomial(probs, num_samples=1).flatten()
+        else:
+            next_token = torch.argmax(next_token_logits, dim=-1)
+
+        return next_token
 
 
 class UnigramWatermarkedLLM(LLM):
-    def __init__(self, model_name, device="cpu", green_list_size=0.5, wm_strength=2, wm_key=None):
-        super().__init__(model_name, device)
+    def __init__(self, device="cpu", green_list_size=0.5, wm_strength=2, watermark_key=None, **kwargs):
+        super().__init__(device=device, **kwargs)
         self.wm_strength = wm_strength
-        self.watermark_key = wm_key if wm_key is not None else np.random.SeedSequence().entropy
+        self.watermark_key = watermark_key if watermark_key is not None else np.random.SeedSequence().entropy
 
         # Split the vocabulary into green and red lists
         rng = np.random.default_rng(self.watermark_key)
@@ -93,16 +98,14 @@ class UnigramWatermarkedLLM(LLM):
 
 class GumbelWatermarkedLLM(LLM):
     def __init__(
-        self,
-        model_name,
-        device="cpu",
-        temperature=1.0,
-        watermark_key_len=256,
-        shift_max=0,
-        seed=69,
+            self,
+            watermark_key_len=256,
+            shift_max=0,
+            seed=69,
+            device="cpu",
+            **kwargs
     ):
-        super().__init__(model_name, device)
-        self.temperature = temperature
+        super().__init__(device=device, **kwargs)
         self.rng = torch.Generator(device=device)
         self.watermark_key_len = watermark_key_len
         self.shift_max = shift_max
@@ -119,20 +122,13 @@ class GumbelWatermarkedLLM(LLM):
         xis = [self.xis[i] for i in r]
         return xis
 
-    def _gamma(self, xis, logits, temperature=0.1, top_p=1.0):
-        if temperature > 0:
-            xis = torch.stack(xis).to(self.device)
-            probs = utils.top_p(logits + xis, temperature, top_p, self.device)
-            next_token = torch.multinomial(probs, num_samples=1)
-        else:
-            next_token = torch.argmax(xis + logits, dim=-1)
+    def _gamma(self, xis, logits):
+        xis = torch.stack(xis).to(self.device)
+        return logits + xis
 
-        next_token = next_token.squeeze()
-        return next_token
-
-    def select_next_token(self, next_token_logits, top_p=1.0):
+    def select_next_token(self, next_token_logits):
         batch_size = next_token_logits.size(0)
         uid = self._get_unique_id(batch_size)
         xi = self._key_func(uid)
-        next_tokens = self._gamma(xi, next_token_logits, self.temperature, top_p)
-        return next_tokens
+        next_token_logits = self._gamma(xi, next_token_logits)
+        return super().select_next_token(next_token_logits)

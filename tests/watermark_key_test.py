@@ -4,16 +4,18 @@ from src.llm import UnigramWatermarkedLLM
 
 def test_unigram_watermarked_llm():
     # Define parameters for the test
-    model_name = "BUT-FIT/csmpt7b"
-    device = "cpu"
-    green_list_size = 0.5
-    wm_strength = 2
+    watermark_model_args = {
+        "model_name": "BUT-FIT/csmpt7b",
+        "device": "cpu",
+        "green_list_size": 0.5,
+        "wm_strength": 2
+    }
     wm_key = None  # Get this from model1
 
     # Instantiate two models with the same watermark key
-    model1 = UnigramWatermarkedLLM(model_name, device, green_list_size, wm_strength)
+    model1 = UnigramWatermarkedLLM(**watermark_model_args)
     wm_key = model1.watermark_key
-    model2 = UnigramWatermarkedLLM(model_name, device, green_list_size, wm_strength, wm_key)
+    model2 = UnigramWatermarkedLLM(**watermark_model_args, watermark_key=wm_key)
 
     # Check that the watermark key is the same
     assert model1.watermark_key == model2.watermark_key, "Watermark keys should be the same"

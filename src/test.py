@@ -22,15 +22,15 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     device = "cuda:0" if torch.cuda.is_available() and not args.force_cpu else "cpu"
-    llm_model = LLM(args.model_name, device=device)
+    llm_model = LLM(model_name=args.model_name, device=device, top_p=0.9)
 
     prompts = [
-        'Rád bych, milí moji, také věděl, jak se dostat za',
-        'Rád bych také věděl, jak se dostat do nebo za',
-        'Rád bych také věděl, jak se dostat před',
-        'Není mi jasné, jak se dostat za tvoji mamku protoze',
-        'Těžko říci, jak se dostat za nebo i před a taky pod',
-        'Ale není mi jasné, jak se dostat za, u nebo i před',
+        'Základní zásady správné výživy jsou',
+        'Pokud chce být člověk zdravyý, pak by měl'
+        'Když se člověk cítí unavený, měl by',
+        'V Praze se nachází',
+        'V roce 1989 byla v Československu provedena',
+        'První defenestrace v Praze se odehrála v roce',
     ]
 
     texts = llm_model.generate_text(
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     del llm_model
 
-    llm_model_w = UnigramWatermarkedLLM(args.model_name, device=device, wm_strength=3)
+    llm_model_w = UnigramWatermarkedLLM(model_name=args.model_name, device=device, wm_strength=3, top_p=0.9)
     texts_w = llm_model_w.generate_text(
         prompts,
         max_length=150

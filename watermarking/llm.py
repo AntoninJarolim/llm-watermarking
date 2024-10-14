@@ -116,6 +116,7 @@ class GumbelWatermarkedLLM(LLM):
         ]
 
     def _get_unique_id(self, batch_size):
+        # TODO: add shift_max to shift the watermark key
         return np.random.randint(self.shift_max + 1, size=batch_size)
 
     def _key_func(self, r):

@@ -27,17 +27,17 @@ if __name__ == "__main__":
     llm_model = LLM(model_name=args.model_name, device=device, top_p=0.9)
 
     prompts = [
-        'Základní zásady správné výživy jsou',
-        'Pokud chce být člověk zdravyý, pak by měl'
-        'Když se člověk cítí unavený, měl by',
-        'V Praze se nachází',
-        'V roce 1989 byla v Československu provedena',
-        'První defenestrace v Praze se odehrála v roce',
+        "Základní zásady správné výživy jsou",
+        "Pokud chce být člověk zdravyý, pak by měl"
+        "Když se člověk cítí unavený, měl by",
+        "V Praze se nachází",
+        "V roce 1989 byla v Československu provedena",
+        "První defenestrace v Praze se odehrála v roce",
     ]
 
     texts = llm_model.generate_text(
         prompts,
-        max_length=150
+        max_length=args.max_length,
     )
 
     del llm_model

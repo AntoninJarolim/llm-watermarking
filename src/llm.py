@@ -3,7 +3,7 @@ import torch
 import tqdm
 import numpy as np
 
-import src.utils as utils
+import utils
 
 
 class LLM:

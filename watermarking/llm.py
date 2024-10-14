@@ -1,6 +1,6 @@
 import transformers
 import torch
-import tqdm
+from tqdm.auto import tqdm
 import numpy as np
 
 from . import utils

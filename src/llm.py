@@ -90,7 +90,8 @@ class UnigramWatermarkedLLM(LLM):
         next_token_logits[:, self.green] += self.wm_strength
         return super().select_next_token(next_token_logits)
 
-class LLM_Gumbel(LLM):
+
+class GumbelWatermarkedLLM(LLM):
     def __init__(
         self,
         model_name,

@@ -1,5 +1,5 @@
 import numpy as np
-from watermarking.llm import UnigramWatermarkedLLM
+from ..llm import UnigramWatermarkedLLM
 
 
 def test_unigram_watermarked_llm():

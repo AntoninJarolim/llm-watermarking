@@ -5,8 +5,8 @@ def inv_gumbel_cdf(x, mu=0, beta=1, eps=1e-20):
     return mu - beta * torch.log(-torch.log(x + eps))
 
 
-def top_p(logits, temperatuer, top_p, device):
-    probs = torch.softmax(logits / temperatuer, dim=-1)
+def top_p(logits, temperature, top_p, device):
+    probs = torch.softmax(logits / temperature, dim=-1)
     sorted_probs, sorted_indices = torch.sort(probs, dim=-1, descending=True)
     sum_probs = torch.cumsum(sorted_probs, dim=-1)
     mask = sum_probs - sorted_probs >= top_p

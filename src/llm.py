@@ -130,9 +130,9 @@ class GumbelWatermarkedLLM(LLM):
         next_token = next_token.squeeze()
         return next_token
 
-    def select_next_token(self, next_token_logits):
+    def select_next_token(self, next_token_logits, top_p=1.0):
         batch_size = next_token_logits.size(0)
         uid = self._get_unique_id(batch_size)
         xi = self._key_func(uid)
-        next_tokens = self._gamma(xi, next_token_logits, self.temperature, 1.0)
+        next_tokens = self._gamma(xi, next_token_logits, self.temperature, top_p)
         return next_tokens

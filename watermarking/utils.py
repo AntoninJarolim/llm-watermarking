@@ -1,4 +1,9 @@
 import torch
+import numpy as np
+
+
+def inv_gumbel_cdf_np(x, mu=0, beta=1, eps=1e-20):
+    return mu - beta * np.log(-np.log(x + eps))
 
 
 def inv_gumbel_cdf(x, mu=0, beta=1, eps=1e-20):

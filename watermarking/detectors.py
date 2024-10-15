@@ -11,14 +11,18 @@ class GumbelDetector:
     which can be found at: https://github.com/PorUna-byte/Gumbelsoft
     """
 
-    def __init__(self, tokenizer, seed, shift_max, wmkey_len, device):
-        super().__init__(tokenizer, seed)
+    def __init__(
+        self, tokenizer, vocab_size, seed=69, shift_max=0, wmkey_len=256, device="cpu"
+    ):
+        self.tokenizer = tokenizer
+        self.vocab_size = vocab_size
         self.shift_max = shift_max
         self.wmkey_len = wmkey_len
         self.device = device
-        self.rng = torch.Generator(device=self.device)
+        self.rng = torch.Generator(device="cpu")
+        self.rng.manual_seed(seed)
         self.xis = [
-            utils.inv_gumbel_cdf(
+            utils.inv_gumbel_cdf_np(
                 torch.rand(self.vocab_size, generator=self.rng).numpy()
             )
             for _ in range(self.wmkey_len)

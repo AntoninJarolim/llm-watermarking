@@ -106,7 +106,7 @@ class GumbelWatermarkedLLM(LLM):
             **kwargs
     ):
         super().__init__(device=device, **kwargs)
-        self.rng = torch.Generator(device=device)
+        self.rng = torch.Generator(device="cpu")
         self.watermark_key_len = watermark_key_len
         self.shift_max = shift_max
         self.rng.manual_seed(seed)

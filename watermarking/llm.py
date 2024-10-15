@@ -54,7 +54,7 @@ class LLM:
         min_prompt_len = min((input_tokens == self.pad_token_id).type(torch.int).argmax(1))
         input_tokens[:, min_prompt_len:] = self.pad_token_id
 
-        for current_position in tqdm.tqdm(range(min_prompt_len, max_length)):
+        for current_position in tqdm(range(min_prompt_len, max_length)):
             # Generate the next token logits
             next_token_logits = self.next_token_logits(input_tokens, current_position)
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
@@ -116,7 +116,6 @@ class GumbelWatermarkedLLM(LLM):
         ]
 
     def _get_unique_id(self, batch_size):
-        # TODO: add shift_max to shift the watermark key
         return np.random.randint(self.shift_max + 1, size=batch_size)
 
     def _key_func(self, r):

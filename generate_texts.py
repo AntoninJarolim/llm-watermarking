@@ -1,5 +1,7 @@
 import argparse
 import torch
+import json
+import os
 
 from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
 
@@ -12,14 +14,25 @@ def get_args():
     parser.add_argument(
         "--english_data_path", type=str, default="./data/english_data.jsonl"
     )
+    parser.add_argument("--output_path", type=str, default="./data/output/")
     parser.add_argument("--batch_size", type=int, default=1)
     return parser.parse_args()
 
 
-def generate_texts(model, data_path, batch_size=1):
+def generate_texts(model, data_path, output_path, batch_size=1):
     text_batch = []
-    # with open(data_path, "r") as f:
-    # Read line by line, once batch is ready, generate text and write to file
+    output_file = os.path.join(output_path, f"{model.model_name}.txt")
+    with open(data_path, "r") as f:
+        line = f.readline()
+        line = json.loads(line)
+        text_batch.append(line["text"])
+
+        if len(text_batch) == batch_size:
+            generated_texts = model.generate_text(text_batch)
+            with open(output_file, "a") as f:
+                for text in generated_texts:
+                    f.write(text + "\n")
+            text_batch = []
 
 
 if __name__ == "__main__":
@@ -31,5 +44,7 @@ if __name__ == "__main__":
     for model_class in model_classes:
         for model_name in model_names:
             model = model_class(model_name=model_name)
-            generate_texts(model, args.czech_data_path, args.batch_size)
+            generate_texts(
+                model, args.czech_data_path, args.output_path, args.batch_size
+            )
             del model

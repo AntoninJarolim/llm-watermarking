@@ -65,4 +65,11 @@ if __name__ == "__main__":
                 args.max_length,
                 args.batch_size,
             )
+            generate_texts(
+                model,
+                args.english_data_path,
+                args.output_path,
+                args.max_length,
+                args.batch_size,
+            )
             del model

@@ -24,7 +24,7 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
     model_name = model.name.replace("/", "-")
     output_file = os.path.join(output_path, f"{lang}-{model_name}.json")
     output_dict = {}
-    output_dict["model_params"] = model.__dict__
+    output_dict["model_params"] = model.watermark_config()
     output_dict["data"] = []
     with open(data_path, "r") as f:
         for line in f:

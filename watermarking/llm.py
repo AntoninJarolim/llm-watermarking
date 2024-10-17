@@ -34,6 +34,9 @@ class LLM:
             param.requires_grad = False
         self.pad_token_id = self.tokenizer.pad_token_id
 
+    def watermark_config(self):
+        return {}
+
     def next_token_logits(self, input_tokens, current_position):
         logits = self.model.forward(input_tokens[:, :current_position]).logits
         return logits
@@ -95,6 +98,13 @@ class UnigramWatermarkedLLM(LLM):
         next_token_logits[:, self.green_list] += self.wm_strength
         return super().select_next_token(next_token_logits)
 
+    def watermark_config(self):
+        return {
+            "green_list_size": self.green_list_size,
+            "wm_strength": self.wm_strength,
+            "watermark_key": self.watermark_key,
+        }
+
 
 class GumbelWatermarkedLLM(LLM):
     def __init__(
@@ -125,6 +135,13 @@ class GumbelWatermarkedLLM(LLM):
     def _gamma(self, xis, logits):
         xis = torch.stack(xis).to(self.device)
         return logits + xis
+
+    def watermark_config(self):
+        return {
+            "watermark_key_len": self.watermark_key_len,
+            "shift_max": self.shift_max,
+            "seed": self.rng.seed(),
+        }
 
     def select_next_token(self, next_token_logits):
         batch_size = next_token_logits.size(0)

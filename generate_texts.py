@@ -19,9 +19,10 @@ def get_args():
     return parser.parse_args()
 
 
-def generate_texts(model, data_path, output_path, max_length, batch_size=1):
+def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1):
     text_batch = []
-    output_file = os.path.join(output_path, data_path, f"{model.name}.txt")
+    model_name = model.name.replace("/", "-")
+    output_file = os.path.join(output_path, f"{lang}-{model_name}.json")
     output_dict = {}
     output_dict["model_params"] = model.__dict__
     output_dict["data"] = []
@@ -43,6 +44,10 @@ def generate_texts(model, data_path, output_path, max_length, batch_size=1):
         for in_text, out_text in zip(text_batch, generated_texts):
             output_dict["data"].append({"prompt": in_text, "generated": out_text})
 
+    # Check if the output directory exists
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+
     with open(output_file, "w") as f:
         json.dump(output_dict, f)
 
@@ -63,6 +68,7 @@ if __name__ == "__main__":
                 args.czech_data_path,
                 args.output_path,
                 args.max_length,
+                "czech",
                 args.batch_size,
             )
             generate_texts(
@@ -70,6 +76,7 @@ if __name__ == "__main__":
                 args.english_data_path,
                 args.output_path,
                 args.max_length,
+                "english",
                 args.batch_size,
             )
             del model

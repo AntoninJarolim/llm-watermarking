@@ -1,3 +1,5 @@
+import math
+
 import torch
 import numpy as np
 from scipy import special
@@ -12,7 +14,7 @@ class GumbelDetector:
     """
 
     def __init__(
-        self, tokenizer, vocab_size, seed=69, shift_max=0, wmkey_len=256, device="cpu"
+            self, tokenizer, vocab_size, seed=69, shift_max=0, wmkey_len=256, device="cpu"
     ):
         self.tokenizer = tokenizer
         self.vocab_size = vocab_size
@@ -62,3 +64,27 @@ class GumbelDetector:
         z_score = z_scores[shift]
 
         return float(z_score), float(p_value)
+
+
+class UnigramWatermarkDetector:
+    def __init__(self, watermark_key, green_list_size, tokenizer, vocab_size, device="cpu"):
+        self.watermark_key = watermark_key
+        self.tokenizer = tokenizer
+        self.device = device
+        self.vocab_size = vocab_size
+        self.green_list_size = green_list_size
+        self.green_list = utils.split_vocab(
+            green_list_size, self.vocab_size, self.watermark_key, device
+        )
+
+    def detect(self, text):
+        tokens = self.tokenizer.encode(
+            text, add_special_tokens=False, return_tensors="pt"
+        ).squeeze().to(self.device)
+        binary_tensor = torch.isin(tokens, self.green_list).int()
+        nr_green_tokens = binary_tensor.sum().item()
+        n = len(tokens)
+        z_statistics = ((nr_green_tokens - self.green_list_size * n) /
+                        math.sqrt(n * self.green_list_size * (1 - self.green_list_size)))
+        return z_statistics
+

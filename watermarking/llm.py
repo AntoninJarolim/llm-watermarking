@@ -1,3 +1,5 @@
+import dataclasses
+
 import transformers
 import torch
 from tqdm.auto import tqdm
@@ -56,7 +58,6 @@ class LLM:
             input_tokens[:, min_prompt_len:] = self.pad_token_id
 
         for current_position in tqdm(range(min_prompt_len, max_length)):
-
             # Generate the next token logits
             next_token_logits = self.next_token_logits(input_tokens, current_position)
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
@@ -84,21 +85,14 @@ class UnigramWatermarkedLLM(LLM):
         super().__init__(device=device, **kwargs)
         self.wm_strength = wm_strength
         self.watermark_key = watermark_key if watermark_key is not None else np.random.SeedSequence().entropy
-
-        # Split the vocabulary into green and red lists
-        rng = np.random.default_rng(self.watermark_key)
-        vocab_indices_rnd = rng.permutation(np.arange(self.vocab_size))
-        split_index = int(self.vocab_size * green_list_size)
-        self.green, self.red = np.split(vocab_indices_rnd, [split_index])
-        self.green = torch.sort(torch.tensor(self.green, dtype=torch.int64)).values.to(device)
+        self.green_list = utils.split_vocab(green_list_size, self.vocab_size, self.watermark_key, device)
+        self.green_list_size = green_list_size
 
     def __str__(self):
         print(f"UnigramWatermarkedLLM with watermark key: {self.watermark_key}")
-        print(f"Green list: {self.green}")
-        print(f"Red list: {self.red}")
 
     def select_next_token(self, next_token_logits):
-        next_token_logits[:, self.green] += self.wm_strength
+        next_token_logits[:, self.green_list] += self.wm_strength
         return super().select_next_token(next_token_logits)
 
 

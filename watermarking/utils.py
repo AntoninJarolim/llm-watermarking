@@ -23,3 +23,13 @@ def top_p(logits, temperature, top_p, device):
         .scatter(-1, sorted_indices, sorted_probs)
     )
     return next_tok_probs
+
+
+def split_vocab(green_list_size, vocab_size, watermark_key, device):
+    # Set the seed to get the same split with the same key
+    rng = np.random.default_rng(watermark_key)
+    vocab_indices_rnd = rng.permutation(np.arange(vocab_size))
+    split_index = int(vocab_size * green_list_size)
+    green, _ = np.split(vocab_indices_rnd, [split_index])
+    green_sorted = torch.sort(torch.tensor(green, dtype=torch.int64)).values.to(device)
+    return green_sorted

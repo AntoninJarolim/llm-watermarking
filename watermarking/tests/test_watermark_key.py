@@ -21,7 +21,7 @@ def test_unigram_watermarked_llm():
     assert model1.watermark_key == model2.watermark_key, "Watermark keys should be the same"
 
     # Verify that the green and red lists are identical
-    assert np.allclose(model1.green, model2.green), "Green lists should match"
+    assert np.allclose(model1.green_list, model2.green_list), "Green lists should match"
     assert np.allclose(model1.red, model2.red), "Red lists should match"
 
     # Ensure that they are two different objects

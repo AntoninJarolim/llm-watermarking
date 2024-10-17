@@ -2,6 +2,7 @@ from pprint import pprint
 
 import torch
 
+from watermarking.detectors import UnigramWatermarkDetector
 from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
 import argparse
 
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 
     if args.watermark_name == "unigram":
         llm_model_w = UnigramWatermarkedLLM(
-            model_name=args.model_name, device=device, wm_strength=3, top_p=0.9
+            model_name=args.model_name, device=device, wm_strength=0.5, top_p=0.9
         )
     elif args.watermark_name == "gumbel":
         llm_model_w = GumbelWatermarkedLLM(
@@ -57,6 +58,21 @@ if __name__ == "__main__":
     texts_w = llm_model_w.generate_text(prompts, max_length=args.max_length)
 
     for x, x_w in zip(texts, texts_w):
-        pprint(x)
-        pprint(x_w)
-        print()
+        if args.watermark_name == "unigram":
+            detector = UnigramWatermarkDetector(
+                llm_model_w.watermark_key, llm_model_w.green_list_size,
+                llm_model_w.tokenizer, llm_model_w.vocab_size,
+                device=device
+            )
+
+            score_x = detector.detect(x)
+            score_x_w = detector.detect(x_w)
+            print(f"Original text with score: {score_x}")
+            pprint(x)
+            print(f"Watermarked text with score: {score_x_w}")
+            pprint(x_w)
+            print()
+        else:
+            pprint(x)
+            pprint(x_w)
+            print()

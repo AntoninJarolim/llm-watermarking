@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     prompts = [
         "Základní zásady správné výživy jsou",
-        "Pokud chce být člověk zdravyý, pak by měl"
+        "Pokud chce být člověk zdravyý, pak by měl",
         "Když se člověk cítí unavený, měl by",
         "V Praze se nachází",
         "V roce 1989 byla v Československu provedena",

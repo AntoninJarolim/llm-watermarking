@@ -47,18 +47,24 @@ class LLM:
     def decode_output(self, output_tokens) -> list:
         return self.tokenizer.batch_decode(output_tokens)
 
-    def generate_text(self, texts, max_length=256):
+    def generate_text(self, texts, max_length=256, pad_to_shortest=False):
         input_tokens = self.tokenize_input(texts, max_length).to(self.device)
 
         # Pad all input tokens to the length of the shortest input
         min_prompt_len = min((input_tokens == self.pad_token_id).type(torch.int).argmax(1))
-        input_tokens[:, min_prompt_len:] = self.pad_token_id
+        if pad_to_shortest:
+            input_tokens[:, min_prompt_len:] = self.pad_token_id
 
         for current_position in tqdm(range(min_prompt_len, max_length)):
+
             # Generate the next token logits
             next_token_logits = self.next_token_logits(input_tokens, current_position)
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
             next_token_ids = self.select_next_token(next_token_logits)
+
+            # Replace only [PAD] tokens
+            non_pad_mask = (input_tokens[:, current_position] != self.pad_token_id)
+            next_token_ids[non_pad_mask] = input_tokens[:, current_position][non_pad_mask]
             input_tokens[:, current_position] = next_token_ids
 
         return self.decode_output(input_tokens)
@@ -84,7 +90,7 @@ class UnigramWatermarkedLLM(LLM):
         vocab_indices_rnd = rng.permutation(np.arange(self.vocab_size))
         split_index = int(self.vocab_size * green_list_size)
         self.green, self.red = np.split(vocab_indices_rnd, [split_index])
-        self.green = torch.sort(torch.tensor(self.green, dtype=torch.int64)).indices.to(device)
+        self.green = torch.sort(torch.tensor(self.green, dtype=torch.int64)).values.to(device)
 
     def __str__(self):
         print(f"UnigramWatermarkedLLM with watermark key: {self.watermark_key}")

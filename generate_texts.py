@@ -14,11 +14,21 @@ def get_args():
     parser.add_argument("--force_cpu", action="store_true", help="Force CPU usage")
     parser.add_argument("--try_upload", action="store_true", default=False,
                         help="Runs ./upload_data.sh after generating the texts")
-    parser.add_argument("--czech_data_path", type=str, default="./data/czech_data.jsonl")
+    parser.add_argument(
+        "--czech_data_path", type=str, default="./data/czech_data.jsonl"
+    )
     parser.add_argument(
         "--english_data_path", type=str, default="./data/english_data.jsonl"
     )
     parser.add_argument("--output_path", type=str, default="./data/output/")
+    parser.add_argument("--model_name", type=str, default=None,
+                        help="Name of the model to use for text generation."
+                             "Using all models if not specified"
+                        )
+    parser.add_argument("--lang", type=str, default=None,
+                        help="Language of the texts to generate."
+                             "Generating both Czech and English texts if not specified"
+                        )
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=256)
     return parser.parse_args()
@@ -49,9 +59,9 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
     generated_tokens = 0
     with open(data_path, "r") as f:
         pbar = tqdm(
-                f,
-                desc=f"Generating {lang} texts with {model_name}",
-                total=count_lines(data_path))
+            f,
+            desc=f"Generating {lang} texts with {model_name}",
+            total=count_lines(data_path))
         for line in pbar:
             text_batch.append(line)
 
@@ -77,28 +87,31 @@ if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available else "cpu"
     if args.force_cpu:
         device = "cpu"
+
     model_classes = [LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM]
-    model_names = ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
+    model_names = (
+        ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
+        if args.model_name is None
+        else [args.model_name]
+    )
+    langs = (
+        ["czech", "english"]
+        if args.model_name is None
+        else [args.lang]
+    )
 
     for model_class in model_classes:
         for model_name in model_names:
-            model = model_class(model_name=model_name, device=device)
-            generate_texts(
-                model,
-                args.czech_data_path,
-                args.output_path,
-                args.max_length,
-                "czech",
-                args.batch_size,
-            )
-            generate_texts(
-                model,
-                args.english_data_path,
-                args.output_path,
-                args.max_length,
-                "english",
-                args.batch_size,
-            )
+            model = model_class(model_name=model_name, device=device, top_p=0.9, )
+            for lang in langs:
+                generate_texts(
+                    model,
+                    args.czech_data_path,
+                    args.output_path,
+                    args.max_length,
+                    lang,
+                    args.batch_size,
+                )
             del model
 
     if args.try_upload:

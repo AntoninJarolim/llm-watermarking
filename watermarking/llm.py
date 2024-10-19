@@ -30,7 +30,7 @@ class LLM:
             torch_dtype=torch.bfloat16,
             trust_remote_code=True,
         )
-        self.model = self.model.eval()
+        self.model = self.model.eval().to(device)
         for param in self.model.parameters():
             param.requires_grad = False
         self.pad_token_id = self.tokenizer.pad_token_id

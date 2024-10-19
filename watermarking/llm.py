@@ -52,15 +52,17 @@ class LLM:
     def decode_output(self, output_tokens) -> list:
         return self.tokenizer.batch_decode(output_tokens)
 
-    def generate_text(self, texts, max_length=256, pad_to_shortest=False):
+    def generate_text(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
         input_tokens = self.tokenize_input(texts, max_length).to(self.device)
 
         # Pad all input tokens to the length of the shortest input
         min_prompt_len = min((input_tokens == self.pad_token_id).type(torch.int).argmax(1))
+        if min_prompt_len == 0:
+            min_prompt_len = input_tokens.size(1)  # No padding detected in any input text
         if pad_to_shortest:
             input_tokens[:, min_prompt_len:] = self.pad_token_id
 
-        for current_position in tqdm(range(min_prompt_len, max_length)):
+        for current_position in tqdm(range(min_prompt_len, max_length), disable=disable_tqdm):
             # Generate the next token logits
             next_token_logits = self.next_token_logits(input_tokens, current_position)
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence

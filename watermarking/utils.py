@@ -33,3 +33,8 @@ def split_vocab(green_list_size, vocab_size, watermark_key, device):
     green, _ = np.split(vocab_indices_rnd, [split_index])
     green_sorted = torch.sort(torch.tensor(green, dtype=torch.int64)).values.to(device)
     return green_sorted
+
+
+def count_lines(file_path):
+    with open(file_path, "r") as f:
+        return sum(1 for _ in f)

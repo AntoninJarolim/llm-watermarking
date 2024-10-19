@@ -3,7 +3,10 @@ import torch
 import json
 import os
 
+from tqdm.auto import tqdm
+
 from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
+from watermarking.utils import count_lines
 
 
 def get_args():
@@ -21,10 +24,16 @@ def get_args():
 
 def generate_batch(text_batch, output_dict, model, max_length):
     generated_texts = model.generate_text(text_batch, max_length=max_length)
+    batch_gen_tokens = 0
     for in_text, out_text in zip(text_batch, generated_texts):
+        out_text = out_text[len(in_text):] # Strip prefix
         output_dict["data"].append(
             {"prompt": in_text, "generated": out_text}
         )
+
+        text_gen_tokens = len(out_text)
+        batch_gen_tokens += text_gen_tokens
+    return batch_gen_tokens
 
 
 def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1):
@@ -34,12 +43,18 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
     output_dict = {}
     output_dict["model_params"] = model.watermark_config()
     output_dict["data"] = []
+    generated_tokens = 0
     with open(data_path, "r") as f:
-        for line in f:
+        pbar = tqdm(
+                f,
+                desc=f"Generating {lang} texts with {model_name}",
+                total=count_lines(data_path))
+        for line in pbar:
             text_batch.append(line)
 
             if len(text_batch) == batch_size:
-                generate_batch(text_batch, output_dict, model, max_length)
+                generated_tokens += generate_batch(text_batch, output_dict, model, max_length)
+                pbar.set_postfix({"tokens/s": generated_tokens / pbar.format_dict['elapsed']})
                 text_batch = []
 
     # Generate the last batch of remaining texts

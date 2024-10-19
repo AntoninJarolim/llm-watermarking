@@ -16,7 +16,7 @@ def get_args():
                         help="Runs ./upload_data.sh after generating the texts")
     parser.add_argument(
         "--in_data_name", type=str, default="data.jsonl",
-        help="File 'data/{lang}/{data_name}' will be used for text generation"
+        help="File 'data/input/{lang}/{data_name}' will be used for text generation"
     )
     parser.add_argument("--output_path", type=str, default="./data/output/")
     parser.add_argument("--model_name", type=str, default=None,
@@ -104,7 +104,7 @@ if __name__ == "__main__":
             for lang in langs:
                 generate_texts(
                     model,
-                    f"data/{lang}/{args.in_data_name}",
+                    f"data/input/{lang}/{args.in_data_name}",
                     args.output_path,
                     args.max_length,
                     lang,

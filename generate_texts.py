@@ -12,6 +12,8 @@ from watermarking.utils import count_lines
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--force_cpu", action="store_true", help="Force CPU usage")
+    parser.add_argument("--try_upload", action="store_true", default=False,
+                        help="Runs ./upload_data.sh after generating the texts")
     parser.add_argument("--czech_data_path", type=str, default="./data/czech_data.jsonl")
     parser.add_argument(
         "--english_data_path", type=str, default="./data/english_data.jsonl"
@@ -98,3 +100,6 @@ if __name__ == "__main__":
                 args.batch_size,
             )
             del model
+
+    if args.try_upload:
+        os.system("./upload_data.sh")

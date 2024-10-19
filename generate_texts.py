@@ -9,14 +9,22 @@ from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--force_cpu", action="store_true", help="Force CPU usage")
-    parser.add_argument("--czech_data_path", type=str, default="./data/czech_data.txt")
+    parser.add_argument("--czech_data_path", type=str, default="./data/czech_data.jsonl")
     parser.add_argument(
-        "--english_data_path", type=str, default="./data/english_data.txt"
+        "--english_data_path", type=str, default="./data/english_data.jsonl"
     )
     parser.add_argument("--output_path", type=str, default="./data/output/")
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=256)
     return parser.parse_args()
+
+
+def generate_batch(text_batch, output_dict, model, max_length):
+    generated_texts = model.generate_text(text_batch, max_length=max_length)
+    for in_text, out_text in zip(text_batch, generated_texts):
+        output_dict["data"].append(
+            {"prompt": in_text, "generated": out_text}
+        )
 
 
 def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1):
@@ -29,20 +37,14 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
     with open(data_path, "r") as f:
         for line in f:
             text_batch.append(line)
-            print(text_batch)
 
             if len(text_batch) == batch_size:
-                generated_texts = model.generate_text(text_batch, max_length=max_length)
-                for in_text, out_text in zip(text_batch, generated_texts):
-                    output_dict["data"].append(
-                        {"prompt": in_text, "generated": out_text}
-                    )
+                generate_batch(text_batch, output_dict, model, max_length)
                 text_batch = []
 
+    # Generate the last batch of remaining texts
     if len(text_batch) > 0:
-        generated_texts = model.generate_text(text_batch)
-        for in_text, out_text in zip(text_batch, generated_texts):
-            output_dict["data"].append({"prompt": in_text, "generated": out_text})
+        generate_batch(text_batch, output_dict, model, max_length)
 
     # Check if the output directory exists
     if not os.path.exists(os.path.dirname(output_path)):
@@ -62,7 +64,7 @@ if __name__ == "__main__":
 
     for model_class in model_classes:
         for model_name in model_names:
-            model = model_class(model_name=model_name)
+            model = model_class(model_name=model_name, device=device)
             generate_texts(
                 model,
                 args.czech_data_path,

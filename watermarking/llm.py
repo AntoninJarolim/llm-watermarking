@@ -44,7 +44,7 @@ class LLM:
             truncation=True,
             padding='max_length',
             max_length=max_length,
-            return_tensors="pt").input_ids
+            return_tensors="pt").input_ids.to(self.device)
 
     def decode_output(self, output_tokens) -> list:
         return self.tokenizer.batch_decode(output_tokens)
@@ -58,7 +58,8 @@ class LLM:
         return self.out_cache.logits
 
     def generate_text(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
-        input_tokens = self.tokenize_input(texts, max_length).to(self.device)
+        input_tokens = self.tokenize_input(texts, max_length)
+        # assert torch.all(input_tokens[:, -1] == self.pad_token_id), "Input text too long"
 
         # Pad all input tokens to the length of the shortest input
         min_prompt_len = min((input_tokens == self.pad_token_id).type(torch.int).argmax(1))
@@ -81,7 +82,6 @@ class LLM:
             input_tokens[:, current_position][pad_mask] = next_token_ids[pad_mask]
 
             prev_pos = current_position
-
         return self.decode_output(input_tokens)
 
     def select_next_token(self, next_token_logits):

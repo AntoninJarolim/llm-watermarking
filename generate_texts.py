@@ -26,7 +26,7 @@ def generate_batch(text_batch, output_dict, model, max_length):
     generated_texts = model.generate_text(text_batch, max_length=max_length)
     batch_gen_tokens = 0
     for in_text, out_text in zip(text_batch, generated_texts):
-        out_text = out_text[len(in_text):] # Strip prefix
+        out_text = out_text[len(in_text):]  # Strip prefix from the generated text
         output_dict["data"].append(
             {"prompt": in_text, "generated": out_text}
         )
@@ -67,7 +67,7 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
         os.makedirs(os.path.dirname(output_path))
 
     with open(output_file, "w") as f:
-        json.dump(output_dict, f)
+        json.dump(output_dict, f, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":

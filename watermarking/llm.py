@@ -10,6 +10,7 @@ from . import utils
 
 class LLM:
     def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
+        self.out_cache = None
         self.device = device
         self.name = model_name
         self.temperature = temperature
@@ -37,10 +38,6 @@ class LLM:
     def watermark_config(self):
         return {}
 
-    def next_token_logits(self, input_tokens, current_position):
-        logits = self.model.forward(input_tokens[:, :current_position]).logits
-        return logits
-
     def tokenize_input(self, texts, max_length=256) -> torch.Tensor:
         return self.tokenizer(
             texts,
@@ -52,6 +49,14 @@ class LLM:
     def decode_output(self, output_tokens) -> list:
         return self.tokenizer.batch_decode(output_tokens)
 
+    def next_token_logits(self, input_tokens, current_position, prev_pos):
+        self.out_cache = self.model.forward(
+            input_tokens[:, prev_pos:current_position],
+            use_cache=True,
+            past_key_values=self.out_cache.past_key_values if prev_pos > 0 else None
+        )
+        return self.out_cache.logits
+
     def generate_text(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
         input_tokens = self.tokenize_input(texts, max_length).to(self.device)
 
@@ -62,16 +67,20 @@ class LLM:
         if pad_to_shortest:
             input_tokens[:, min_prompt_len:] = self.pad_token_id
 
+        prev_pos = 0
         for current_position in tqdm(range(min_prompt_len, max_length), disable=disable_tqdm):
             # Generate the next token logits
-            next_token_logits = self.next_token_logits(input_tokens, current_position)
+            next_token_logits = self.next_token_logits(
+                input_tokens, current_position, prev_pos
+            )
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
             next_token_ids = self.select_next_token(next_token_logits)
 
             # Replace only [PAD] tokens
-            non_pad_mask = (input_tokens[:, current_position] != self.pad_token_id)
-            next_token_ids[non_pad_mask] = input_tokens[:, current_position][non_pad_mask]
-            input_tokens[:, current_position] = next_token_ids
+            pad_mask = (input_tokens[:, current_position] == self.pad_token_id)
+            input_tokens[:, current_position][pad_mask] = next_token_ids[pad_mask]
+
+            prev_pos = current_position
 
         return self.decode_output(input_tokens)
 

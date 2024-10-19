@@ -39,7 +39,8 @@ def generate_batch(text_batch, output_dict, model, max_length):
 def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1):
     text_batch = []
     model_name = model.name.replace("/", "-")
-    output_file = os.path.join(output_path, f"{lang}-{model_name}.json")
+    wm_class_name = type(model).__name__
+    output_file = os.path.join(output_path, f"{lang}-{model_name}-{wm_class_name}.json")
     output_dict = {}
     output_dict["model_params"] = model.watermark_config()
     output_dict["data"] = []

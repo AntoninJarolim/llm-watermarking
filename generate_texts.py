@@ -1,12 +1,10 @@
 import argparse
 import datetime
-import time
 
 import torch
 import json
 import os
 
-from six import with_metaclass
 from tqdm.auto import tqdm
 
 from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM

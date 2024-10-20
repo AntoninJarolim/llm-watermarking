@@ -1,4 +1,7 @@
 import argparse
+import datetime
+import time
+
 import torch
 import json
 import os
@@ -47,19 +50,21 @@ def generate_batch(text_batch, output_dict, model, max_length):
     return batch_gen_tokens
 
 
-def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1):
+def generate_texts(model, data_path, output_path, max_length, lang, batch_size, param_dict):
     text_batch = []
     model_name = model.name.replace("/", "-")
     wm_class_name = type(model).__name__
-    output_file = os.path.join(output_path, f"{lang}-{model_name}-{wm_class_name}.json")
-    output_dict = {}
-    output_dict["model_params"] = model.watermark_config()
-    output_dict["data"] = []
+    output_file = os.path.join(output_path, f"{lang}-{model_name}-{wm_class_name}-{now_time_str}.json")
+    output_dict = {
+        "model_params": model.watermark_config(),
+        "run_params": param_dict,
+        "data": []
+    }
     generated_tokens = 0
     with open(data_path, "r") as f:
         pbar = tqdm(
             f,
-            desc=f"Generating {lang} texts with {model_name} - {wm_class_name}",
+            desc=f"Gen. {lang} /w {model_name} - {wm_class_name}",
             total=count_lines(data_path))
         for line in pbar:
             line = json.loads(line)["text"]
@@ -100,19 +105,34 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
+    temperatures = [0.5, 1, 1.5, 2, 5]
+    top_p = 0.9
+    now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+
     for model_class in model_classes:
         for model_name in model_names:
-            model = model_class(model_name=model_name, device=device, top_p=0.9, )
             for lang in langs:
-                generate_texts(
-                    model,
-                    f"data/input/{lang}/{args.in_data_name}",
-                    args.output_path,
-                    args.max_length,
-                    lang,
-                    args.batch_size,
-                )
-            del model
+                for temperature in temperatures:
+                    model = model_class(model_name=model_name, device=device,
+                                        top_p=top_p, temperature=temperature)
 
-    if args.try_upload:
-        os.system("./upload_data.sh")
+                    run_dict = {
+                        'temperature': temperature,
+                        'top_p': top_p,
+                        'batch_size': args.batch_size,
+                        'max_length': args.max_length,
+                        'time': now_time_str
+                    }
+                    generate_texts(
+                        model,
+                        f"data/input/{lang}/{args.in_data_name}",
+                        args.output_path,
+                        args.max_length,
+                        lang,
+                        args.batch_size,
+                        run_dict,
+                    )
+                    del model
+
+                    if args.try_upload:
+                        os.system("./upload_data.sh")

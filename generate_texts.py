@@ -62,6 +62,7 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
             desc=f"Generating {lang} texts with {model_name} - {wm_class_name}",
             total=count_lines(data_path))
         for line in pbar:
+            line = json.loads(line)["text"]
             text_batch.append(line)
 
             if len(text_batch) == batch_size:

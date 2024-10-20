@@ -93,7 +93,7 @@ if __name__ == "__main__":
     if args.force_cpu:
         device = "cpu"
 
-    model_classes = [LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM]
+    model_classes = [GumbelWatermarkedLLM, LLM, UnigramWatermarkedLLM]
     model_names = (
         ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
         if args.model_name is None
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    temperatures = [0.5, 1, 1.5, 2, 5]
+    temperatures = [0.5, 1.5, 2, 5]
     top_p = 0.9
     now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 

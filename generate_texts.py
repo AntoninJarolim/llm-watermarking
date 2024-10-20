@@ -3,6 +3,7 @@ import torch
 import json
 import os
 
+from six import with_metaclass
 from tqdm.auto import tqdm
 
 from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
@@ -58,7 +59,7 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size=1
     with open(data_path, "r") as f:
         pbar = tqdm(
             f,
-            desc=f"Generating {lang} texts with {model_name}",
+            desc=f"Generating {lang} texts with {model_name} - {wm_class_name}",
             total=count_lines(data_path))
         for line in pbar:
             text_batch.append(line)

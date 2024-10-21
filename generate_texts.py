@@ -103,9 +103,8 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    temperatures = [0.5, 1.5, 2, 5]
+    temperatures = [1.5, 2, 0.5,]
     top_p = 0.9
-    now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
     for model_class in model_classes:
         for model_name in model_names:
@@ -114,6 +113,7 @@ if __name__ == "__main__":
                     model = model_class(model_name=model_name, device=device,
                                         top_p=top_p, temperature=temperature)
 
+                    now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
                     run_dict = {
                         'temperature': temperature,
                         'top_p': top_p,

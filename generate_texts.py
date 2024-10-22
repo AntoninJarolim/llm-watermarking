@@ -20,14 +20,15 @@ def get_args():
         "--in_data_name", type=str, default="data.jsonl",
         help="File 'data/input/{lang}/{data_name}' will be used for text generation"
     )
-    parser.add_argument("--output_path", type=str, default="./data/output/")
+    parser.add_argument("--output_path", type=str, default="./data/output/",
+                        help="Default is './data/output/'")
     parser.add_argument("--model_name", type=str, default=None,
-                        help="Name of the model to use for text generation."
+                        help="Name of the model to use for text generation. "
                              "Using all models if not specified"
                         )
     parser.add_argument("--lang", type=str, default=None,
-                        help="Language of the texts to generate."
-                             "Generating both Czech and English texts if not specified"
+                        help="Language of the texts to generate. "
+                             "Generating both Czech and English texts if not specified."
                         )
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=256)
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     if args.force_cpu:
         device = "cpu"
 
-    model_classes = [GumbelWatermarkedLLM, LLM, UnigramWatermarkedLLM]
+    model_classes = [GumbelWatermarkedLLM, UnigramWatermarkedLLM]# , LLM]
     model_names = (
         ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
         if args.model_name is None
@@ -103,13 +104,14 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    temperatures = [1.5, 2, 0.5,]
+    repeats = range(10)
     top_p = 0.9
+    temperature = 0
 
     for model_class in model_classes:
         for model_name in model_names:
             for lang in langs:
-                for temperature in temperatures:
+                for _ in repeats:
                     model = model_class(model_name=model_name, device=device,
                                         top_p=top_p, temperature=temperature)
 

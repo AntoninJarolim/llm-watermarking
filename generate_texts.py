@@ -106,18 +106,16 @@ if __name__ == "__main__":
 
     repeats = range(10)
     top_p = 0.9
-    temperature = 0
 
     for model_class in model_classes:
         for model_name in model_names:
             for lang in langs:
                 for _ in repeats:
                     model = model_class(model_name=model_name, device=device,
-                                        top_p=top_p, temperature=temperature)
+                                        top_p=top_p)
 
                     now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
                     run_dict = {
-                        'temperature': temperature,
                         'top_p': top_p,
                         'batch_size': args.batch_size,
                         'max_length': args.max_length,

@@ -79,8 +79,8 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size, 
         generate_batch(text_batch, output_dict, model, max_length)
 
     # Check if the output directory exists
-    if not os.path.exists(os.path.dirname(output_path)):
-        os.makedirs(os.path.dirname(output_path))
+    if not os.path.exists(os.path.dirname(output_file)):
+        os.makedirs(os.path.dirname(output_file))
 
     with open(output_file, "w") as f:
         json.dump(output_dict, f, ensure_ascii=False, indent=4)

@@ -47,7 +47,13 @@ class LLM:
             return_tensors="pt").input_ids.to(self.device)
 
     def decode_output(self, output_tokens) -> list:
-        return self.tokenizer.batch_decode(output_tokens)
+        eos_positions = torch.argwhere(output_tokens == self.tokenizer.eos_token_id)
+        for batch_id, pos in eos_positions:
+            # fill [EOS] tokens after first [EOS] token
+            output_tokens[batch_id, pos:] = self.tokenizer.eos_token_id
+
+        # skip_special_tokens for removing [EOS] tokens
+        return self.tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
 
     def next_token_logits(self, input_tokens, current_position, prev_pos):
         self.out_cache = self.model.forward(

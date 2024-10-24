@@ -84,7 +84,8 @@ class UnigramWatermarkDetector:
         binary_tensor = torch.isin(tokens, self.green_list).int()
         nr_green_tokens = binary_tensor.sum().item()
         n = len(tokens)
-        z_statistics = ((nr_green_tokens - self.green_list_size * n) /
+        z_score = ((nr_green_tokens - self.green_list_size * n) /
                         math.sqrt(n * self.green_list_size * (1 - self.green_list_size)))
-        return z_statistics
+        return z_score, None
+
 

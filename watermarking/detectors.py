@@ -14,12 +14,12 @@ class GumbelDetector:
     """
 
     def __init__(
-            self, tokenizer, vocab_size, seed=69, shift_max=0, wmkey_len=256, device="cpu"
+            self, tokenizer, vocab_size, seed=69, shift_max=0, watermark_key_len=256, device="cpu"
     ):
         self.tokenizer = tokenizer
         self.vocab_size = vocab_size
         self.shift_max = shift_max
-        self.wmkey_len = wmkey_len
+        self.watermark_key_len = watermark_key_len
         self.device = device
         self.rng = torch.Generator(device="cpu")
         self.rng.manual_seed(seed)
@@ -27,7 +27,7 @@ class GumbelDetector:
             utils.inv_gumbel_cdf_np(
                 torch.rand(self.vocab_size, generator=self.rng).numpy()
             )
-            for _ in range(self.wmkey_len)
+            for _ in range(self.watermark_key_len)
         ]
 
     def sequence_score(self, token_ids, xi):

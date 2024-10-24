@@ -67,7 +67,7 @@ class GumbelDetector:
 
 
 class UnigramWatermarkDetector:
-    def __init__(self, watermark_key, green_list_size, tokenizer, vocab_size, device="cpu"):
+    def __init__(self, tokenizer, vocab_size, watermark_key, green_list_size, device="cpu"):
         self.watermark_key = watermark_key
         self.tokenizer = tokenizer
         self.device = device
@@ -80,12 +80,10 @@ class UnigramWatermarkDetector:
     def detect(self, text):
         tokens = self.tokenizer.encode(
             text, add_special_tokens=False, return_tensors="pt"
-        ).squeeze().to(self.device)
+        )[0].to(self.device)
         binary_tensor = torch.isin(tokens, self.green_list).int()
         nr_green_tokens = binary_tensor.sum().item()
         n = len(tokens)
         z_score = ((nr_green_tokens - self.green_list_size * n) /
-                        math.sqrt(n * self.green_list_size * (1 - self.green_list_size)))
+                   math.sqrt(n * self.green_list_size * (1 - self.green_list_size)))
         return z_score, None
-
-

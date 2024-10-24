@@ -38,3 +38,7 @@ def split_vocab(green_list_size, vocab_size, watermark_key, device):
 def count_lines(file_path):
     with open(file_path, "r") as f:
         return sum(1 for _ in f)
+
+
+def flatten_list(list_of_lists):
+    return [item for sublist in list_of_lists for item in sublist]

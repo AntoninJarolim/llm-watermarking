@@ -54,21 +54,27 @@ def generate_batch(text_batch, output_dict, model, max_length):
     return batch_gen_tokens
 
 
-def generate_texts(model, data_path, output_path, max_length, lang, batch_size, param_dict):
-    text_batch = []
-    model_name = model.name.replace("/", "-")
-    wm_class_name = type(model).__name__
-    output_file = os.path.join(output_path, f"{lang}-{model_name}-{wm_class_name}-{now_time_str}.json")
+def generate_texts(model, data_path, output_path, max_length, lang, batch_size, param_dict, unique_id=None):
+    unique_id = now_time_str if unique_id is None else unique_id
+    model_params = model.watermark_config()
+    model_name = model_params['model_name']
+    class_name = model_params['class_name']
+    output_file = os.path.join(
+        output_path,
+        f"{lang}~{model_name}~{class_name}~{unique_id}.json"
+    )
     output_dict = {
-        "model_params": model.watermark_config(),
+        "model_params": model_params,
         "run_params": param_dict,
         "data": []
     }
+
+    text_batch = []
     generated_tokens = 0
     with open(data_path, "r") as f:
         pbar = tqdm(
             f,
-            desc=f"Gen. {lang} /w {model_name} - {wm_class_name}",
+            desc=f"Gen. {lang} /w {model_name} - {class_name}",
             total=count_lines(data_path))
         for line in pbar:
             line = json.loads(line)["text"]
@@ -98,10 +104,11 @@ if __name__ == "__main__":
         device = "cpu"
 
     model_classes = [
-        GumbelWatermarkedLLM,
-        UnigramWatermarkedLLM,
+        # GumbelWatermarkedLLM,
+        # UnigramWatermarkedLLM,
         GumbelNGramWatermarkedLLM,
-    ]  # , LLM]
+        # LLM,
+    ]
     model_names = (
         ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
         if args.model_name is None
@@ -113,22 +120,25 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    repeats = range(10)
+    taus = [0.4, 0.6, 0.2, 0.8]
     top_p = 0.9
 
     for model_class in model_classes:
         for model_name in model_names:
             for lang in langs:
-                for _ in repeats:
-                    model = model_class(model_name=model_name, device=device,
-                                        top_p=top_p)
+                for tau in taus:
+                    model = model_class(
+                        model_name=model_name,
+                        device=device,
+                        top_p=top_p,
+                        tau=tau
+                    )
 
-                    now_time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
                     run_dict = {
                         'top_p': top_p,
                         'batch_size': args.batch_size,
                         'max_length': args.max_length,
-                        'time': now_time_str
+                        'time': (now_time_str := datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
                     }
                     generate_texts(
                         model,
@@ -138,6 +148,7 @@ if __name__ == "__main__":
                         lang,
                         args.batch_size,
                         run_dict,
+                        unique_id=tau
                     )
                     del model
 

@@ -36,7 +36,10 @@ class LLM:
         self.pad_token_id = self.tokenizer.pad_token_id
 
     def watermark_config(self):
-        return {}
+        return {
+            'class_name': type(self).__name__,
+            'model_name': self.name.replace("/", "-")
+        }
 
     def tokenize_input(self, texts, max_length=256) -> torch.Tensor:
         return self.tokenizer(
@@ -76,7 +79,7 @@ class LLM:
 
         prev_pos = 0
         for current_position in tqdm(
-            range(min_prompt_len, max_length), disable=disable_tqdm
+                range(min_prompt_len, max_length), disable=disable_tqdm
         ):
             next_token_logits = self.next_token_logits(
                 input_tokens, current_position, prev_pos
@@ -118,24 +121,25 @@ class UnigramWatermarkedLLM(LLM):
 
     def watermark_config(self):
         return {
+            **super().watermark_config(),
             "green_list_size": self.green_list_size,
             "wm_strength": self.wm_strength,
-            "watermark_key": self.watermark_key,
+            "watermark_key": self.watermark_key
         }
 
 
 class GumbelNGramWatermarkedLLM(LLM):
     def __init__(
-        self,
-        seed=69,
-        shift_max=0,
-        ngram=1,
-        tau=0.4,
-        seeding="hash",
-        hash_key=35317,
-        drop_prob=0.0,
-        device="cpu",
-        **kwargs,
+            self,
+            seed=69,
+            shift_max=0,
+            ngram=1,
+            tau=0.4,
+            seeding="hash",
+            hash_key=35317,
+            drop_prob=0.0,
+            device="cpu",
+            **kwargs,
     ):
         super().__init__(device=device, **kwargs)
         self.seed = seed
@@ -186,12 +190,12 @@ class GumbelNGramWatermarkedLLM(LLM):
     def get_seed_rng(self, input_pds):
         seed = self.seed
         for i in input_pds:
-            seed = (seed * self.hash_key + i.item()) % (2**64 - 1)
+            seed = (seed * self.hash_key + i.item()) % (2 ** 64 - 1)
 
         return seed
 
     def generate_text(
-        self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True
+            self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True
     ):
         input_tokens = self.tokenize_input(texts, max_length)
         # assert torch.all(input_tokens[:, -1] == self.pad_token_id), "Input text too long"
@@ -210,9 +214,9 @@ class GumbelNGramWatermarkedLLM(LLM):
         unique_id = self._get_unique_id(input_tokens.size(0))
         prev_pos = 0
         for current_position in tqdm(
-            range(min_prompt_len, max_length), disable=disable_tqdm
+                range(min_prompt_len, max_length), disable=disable_tqdm
         ):
-            n_gram = input_tokens[:, current_position - self.ngram : current_position]
+            n_gram = input_tokens[:, current_position - self.ngram: current_position]
             next_token_logits = super().next_token_logits(
                 input_tokens, current_position, prev_pos
             )
@@ -231,6 +235,20 @@ class GumbelNGramWatermarkedLLM(LLM):
         xi = self._key_func(uid, ngram)
         next_token = self._gamma(xi, next_token_logits)
         return next_token
+
+    def watermark_config(self):
+        return {
+            **super().watermark_config(),
+            **dict(
+                seed=self.seed,
+                seeding=self.seeding,
+                hash_key=self.hash_key,
+                ngram=self.ngram,
+                tau=self.tau,
+                shift_max=self.shift_max,
+                drop_prob=self.drop_prob,
+            )
+        }
 
 
 class GumbelWatermarkedLLM(LLM):
@@ -265,6 +283,7 @@ class GumbelWatermarkedLLM(LLM):
 
     def watermark_config(self):
         return {
+            **super().watermark_config(),
             "watermark_key_len": self.watermark_key_len,
             "shift_max": self.shift_max,
             "seed": self.rng.seed(),

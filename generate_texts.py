@@ -120,39 +120,41 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    taus = [0.4, 0.6, 0.2, 0.8]
+    taus = [0.3, 0.2]
     top_p = 0.9
     ngram = 3
+    repeats = range(10)
 
     for model_class in model_classes:
         for model_name in model_names:
             for lang in langs:
                 for tau in taus:
-                    model = model_class(
-                        model_name=model_name,
-                        device=device,
-                        top_p=top_p,
-                        tau=tau,
-                        ngram=ngram
-                    )
+                    for i in repeats:
+                        model = model_class(
+                            model_name=model_name,
+                            device=device,
+                            top_p=top_p,
+                            tau=tau,
+                            ngram=ngram
+                        )
 
-                    run_dict = {
-                        'top_p': top_p,
-                        'batch_size': args.batch_size,
-                        'max_length': args.max_length,
-                        'time': (now_time_str := datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
-                    }
-                    generate_texts(
-                        model,
-                        f"data/input/{lang}/{args.in_data_name}",
-                        args.output_path,
-                        args.max_length,
-                        lang,
-                        args.batch_size,
-                        run_dict,
-                        unique_id=f"ngram_{ngram}~tau_{tau}"
-                    )
-                    del model
+                        run_dict = {
+                            'top_p': top_p,
+                            'batch_size': args.batch_size,
+                            'max_length': args.max_length,
+                            'time': (now_time_str := datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
+                        }
+                        generate_texts(
+                            model,
+                            f"data/input/{lang}/{args.in_data_name}",
+                            args.output_path,
+                            args.max_length,
+                            lang,
+                            args.batch_size,
+                            run_dict,
+                            unique_id=f"repeat_{i}~tau_{tau}"
+                        )
+                        del model
 
-                    if args.try_upload:
-                        os.system("./upload_data.sh")
+                        if args.try_upload:
+                            os.system("./upload_data.sh")

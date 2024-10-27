@@ -122,6 +122,7 @@ if __name__ == "__main__":
 
     taus = [0.4, 0.6, 0.2, 0.8]
     top_p = 0.9
+    ngram = 3
 
     for model_class in model_classes:
         for model_name in model_names:
@@ -131,7 +132,8 @@ if __name__ == "__main__":
                         model_name=model_name,
                         device=device,
                         top_p=top_p,
-                        tau=tau
+                        tau=tau,
+                        ngram=ngram
                     )
 
                     run_dict = {
@@ -148,7 +150,7 @@ if __name__ == "__main__":
                         lang,
                         args.batch_size,
                         run_dict,
-                        unique_id=tau
+                        unique_id=f"ngram_{ngram}~tau_{tau}"
                     )
                     del model
 

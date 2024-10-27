@@ -7,7 +7,12 @@ import os
 
 from tqdm.auto import tqdm
 
-from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
+from watermarking.llm import (
+    LLM,
+    UnigramWatermarkedLLM,
+    GumbelWatermarkedLLM,
+    GumbelNGramWatermarkedLLM,
+)
 from watermarking.utils import count_lines
 
 
@@ -92,7 +97,11 @@ if __name__ == "__main__":
     if args.force_cpu:
         device = "cpu"
 
-    model_classes = [GumbelWatermarkedLLM, UnigramWatermarkedLLM]# , LLM]
+    model_classes = [
+        GumbelWatermarkedLLM,
+        UnigramWatermarkedLLM,
+        GumbelNGramWatermarkedLLM,
+    ]  # , LLM]
     model_names = (
         ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
         if args.model_name is None

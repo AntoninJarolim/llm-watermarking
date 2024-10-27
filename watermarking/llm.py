@@ -75,8 +75,9 @@ class LLM:
             input_tokens[:, min_prompt_len:] = self.pad_token_id
 
         prev_pos = 0
-        for current_position in tqdm(range(min_prompt_len, max_length), disable=disable_tqdm):
-            # Generate the next token logits
+        for current_position in tqdm(
+            range(min_prompt_len, max_length), disable=disable_tqdm
+        ):
             next_token_logits = self.next_token_logits(
                 input_tokens, current_position, prev_pos
             )
@@ -121,6 +122,115 @@ class UnigramWatermarkedLLM(LLM):
             "wm_strength": self.wm_strength,
             "watermark_key": self.watermark_key,
         }
+
+
+class GumbelNGramWatermarkedLLM(LLM):
+    def __init__(
+        self,
+        seed=69,
+        shift_max=0,
+        ngram=1,
+        tau=0.4,
+        seeding="hash",
+        hash_key=35317,
+        drop_prob=0.0,
+        device="cpu",
+        **kwargs,
+    ):
+        super().__init__(device=device, **kwargs)
+        self.seed = seed
+        self.seeding = seeding
+        self.hash_key = hash_key
+        self.ngram = ngram
+        self.tau = tau
+        self.shift_max = shift_max
+        self.drop_prob = drop_prob
+        self.rng = torch.Generator(device="cpu")
+
+    def _get_unique_id(self, batch_size):
+        return np.random.randint(self.shift_max + 1, size=batch_size)
+
+    def _key_func(self, r, ngram):
+        batch_size = ngram.size(0)
+        batched_xis = []
+        for i in range(batch_size):
+            seed = self.get_seed_rng(ngram[i])
+            self.rng.manual_seed(seed)
+            xi = torch.rand(self.vocab_size, generator=self.rng)
+            xi = utils.inv_gumbel_cdf(xi)
+            xi = xi.roll(-r[i])
+            batched_xis.append(xi)
+
+        return batched_xis
+
+    def _gamma(self, xis, logits):
+        if self.temperature > 0:
+            probs = utils.top_p(
+                logits, self.temperature, self.top_p, device=self.device
+            )
+            xis = torch.stack(xis).to(self.device)
+            if self.tau > 0:
+                next_token = torch.multinomial(
+                    torch.softmax((probs.log() + xis) / self.tau, dim=-1), num_samples=1
+                )
+            else:
+                if np.random.rand() < self.drop_prob:
+                    next_token = torch.multinomial(probs, num_samples=1)
+                else:
+                    next_token = torch.argmax(probs.log() + xis, dim=-1, keepdim=True)
+        else:
+            next_token = torch.argmax(logits, dim=-1)
+        next_token = next_token.reshape(-1)
+        return next_token
+
+    def get_seed_rng(self, input_pds):
+        seed = self.seed
+        for i in input_pds:
+            seed = (seed * self.hash_key + i.item()) % (2**64 - 1)
+
+        return seed
+
+    def generate_text(
+        self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True
+    ):
+        input_tokens = self.tokenize_input(texts, max_length)
+        # assert torch.all(input_tokens[:, -1] == self.pad_token_id), "Input text too long"
+
+        # Pad all input tokens to the length of the shortest input
+        min_prompt_len = min(
+            (input_tokens == self.pad_token_id).type(torch.int).argmax(1)
+        )
+        if min_prompt_len == 0:
+            min_prompt_len = input_tokens.size(
+                1
+            )  # No padding detected in any input text
+        if pad_to_shortest:
+            input_tokens[:, min_prompt_len:] = self.pad_token_id
+
+        unique_id = self._get_unique_id(input_tokens.size(0))
+        prev_pos = 0
+        for current_position in tqdm(
+            range(min_prompt_len, max_length), disable=disable_tqdm
+        ):
+            n_gram = input_tokens[:, current_position - self.ngram : current_position]
+            next_token_logits = super().next_token_logits(
+                input_tokens, current_position, prev_pos
+            )
+            next_token_logits = next_token_logits[:, -1, :]
+            next_token_ids = self.select_next_token(
+                next_token_logits, n_gram, unique_id
+            )
+
+            pad_mask = input_tokens[:, current_position] == self.pad_token_id
+            input_tokens[:, current_position][pad_mask] = next_token_ids[pad_mask]
+
+            prev_pos = current_position
+        return self.decode_output(input_tokens)
+
+    def select_next_token(self, next_token_logits, ngram, uid):
+        xi = self._key_func(uid, ngram)
+        next_token = self._gamma(xi, next_token_logits)
+        return next_token
 
 
 class GumbelWatermarkedLLM(LLM):

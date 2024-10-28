@@ -151,6 +151,18 @@ class GumbelNGramWatermarkedLLM(LLM):
         self.drop_prob = drop_prob
         self.rng = torch.Generator(device="cpu")
 
+
+    def watermark_config(self):
+        return {
+            "seed": self.seed,
+            "shift_max": self.shift_max,
+            "ngram": self.ngram,
+            "tau": self.tau,
+            "seeding": self.seeding,
+            "hash_key": self.hash_key,
+            "drop_prob": self.drop_prob,
+        }
+
     def _get_unique_id(self, batch_size):
         return np.random.randint(self.shift_max + 1, size=batch_size)
 

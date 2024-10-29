@@ -5,9 +5,10 @@ import os
 import torch
 import transformers
 from tqdm import tqdm
-
+from multiprocessing import Pool
 from watermarking.detectors import GumbelDetector, UnigramWatermarkDetector
 from watermarking.utils import flatten_list
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -156,21 +157,26 @@ def get_files_to_parse(data_dir):
         yield file
 
 
+def process_file(file):
+    # pbar.set_description(f"Detecting watermark in {file[-50:]}")
+
+    configurations = get_configurations(file, data_dir)
+    in_file = os.path.join(data_dir, file)
+    get_out = detect(in_file, configurations)
+
+    out_file = os.path.join("data/output", f"{args.data_dir}_detected", file)
+    if not os.path.exists(os.path.dirname(out_file)):
+        os.makedirs(os.path.dirname(out_file))
+
+    with open(out_file, 'w') as f:
+        json.dump(get_out, f)
+
+
 if __name__ == '__main__':
     args = get_args()
 
     data_dir = os.path.join("data/output", args.data_dir)
     files_to_parse = get_files_to_parse(data_dir)
-    for file in (pbar := tqdm(files_to_parse)):
-        pbar.set_description(f"Detecting watermark in {file[-50:]}")
 
-        configurations = get_configurations(file, data_dir)
-        in_file = os.path.join(data_dir, file)
-        get_out = detect(in_file, configurations)
-
-        out_file = os.path.join("data/output", f"{args.data_dir}_detected", file)
-        if not os.path.exists(os.path.dirname(out_file)):
-            os.makedirs(os.path.dirname(out_file))
-
-        with open(out_file, 'w') as f:
-            json.dump(get_out, f)
+    with Pool() as pool:
+        pool.map(process_file, files_to_parse)

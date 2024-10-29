@@ -1,12 +1,12 @@
 import argparse
 import json
 import os
-
-import torch
 import transformers
-from tqdm import tqdm
 from multiprocessing import Pool
-from watermarking.detectors import GumbelDetector, UnigramWatermarkDetector
+
+from tqdm import tqdm
+
+from watermarking.detectors import GumbelDetector, UnigramWatermarkDetector, GumbelNGramDetector
 from watermarking.utils import flatten_list
 
 
@@ -18,44 +18,15 @@ def get_args():
                         help="Skipping all files that do not contain this model name"
                              "Processing all if not specified."
                         )
+    parser.add_argument('--watermark_name', type=str, default=None,
+                        help="Skipping all files that do not contain this watermark name"
+                             "Processing all if not specified."
+                        )
     return parser.parse_args()
 
 
-def parse_language(filename):
-    if filename.startswith("english-"):
-        lang = "english"
-    elif filename.startswith("czech-"):
-        lang = "czech"
-    else:
-        raise ValueError("Invalid file name")
-    return lang
-
-
-def parse_watermark_type(filename):
-    if "GumbelWatermarkedLLM" in filename:
-        watermark_str = "GumbelWatermarkedLLM"
-    elif "UnigramWatermarkedLLM":
-        watermark_str = "UnigramWatermarkedLLM"
-    else:
-        raise ValueError("Invalid file name")
-    return watermark_str
-
-
-def parse_model_string(file):
-    # Mapping of model names in file to valid model names
-    valid_model_names = {
-        'BUT-FIT-csmpt7b': 'BUT-FIT/csmpt7b',
-        'meta-llama-Llama-3.1-8B': 'meta-llama/Llama-3.1-8B',
-    }
-    for m in valid_model_names.keys():
-        if m in file:
-            return valid_model_names[m]
-    raise ValueError("Invalid model name")
-
-
-def init_tokenizer(file):
+def init_tokenizer(model_name):
     global tokenizer, vocab_size, last_model_name
-    model_name = parse_model_string(file)
     if 'last_model_name' in globals() and model_name == last_model_name:
         return tokenizer, vocab_size
 
@@ -71,9 +42,8 @@ def init_tokenizer(file):
     return tokenizer, vocab_size
 
 
-def get_watermark_detector(file, params):
-    watermark_str = parse_watermark_type(file)
-    tokenizer, vocab_size = init_tokenizer(file)
+def get_watermark_detector(params, watermark_str, model_name):
+    tokenizer, vocab_size = init_tokenizer(model_name)
     detector_params = params.copy()
     detector_params["tokenizer"] = tokenizer
     detector_params["vocab_size"] = vocab_size
@@ -85,14 +55,17 @@ def get_watermark_detector(file, params):
         if "wm_strength" in params:
             del detector_params["wm_strength"]
         return UnigramWatermarkDetector(**detector_params)
+    elif watermark_str == "GumbelNGramWatermarkedLLM":
+        for param_name in  ['class_name', 'model_name', 'seeding', 'tau', 'drop_prob']:
+            if param_name in params:
+                del detector_params[param_name]
+        return GumbelNGramDetector(**detector_params)
     else:
-        raise ValueError("Invalid watermark type")
+        raise ValueError(f"Invalid watermark type: {watermark_str}")
 
 
-def get_configurations(file, data_dir):
+def get_configurations(data_dir, lang, watermark_str):
     """Returns list of configurations to be used on file for detection"""
-    lang = parse_language(file)
-    watermark_str = parse_watermark_type(file)
 
     configurations = []
     for file in os.listdir(data_dir):
@@ -114,7 +87,7 @@ def try_detect(watermark_detector, text):
             error = "none"
         except Exception as e:
             error = "error"
-            print(f"Failed detection at text: '{text}' with error: \n{e}")
+            print(f"{os.getpid()}: Failed detection at text: '{text}' with error: \n{e}")
 
     return {
         "z_score": z_score,
@@ -123,12 +96,13 @@ def try_detect(watermark_detector, text):
     }
 
 
-def detect_file(filename, parameters):
-    watermark_detector = get_watermark_detector(filename, parameters)
+def detect_file(filename, parameters, model_name, watermark_str):
+    watermark_detector = get_watermark_detector(parameters, watermark_str, model_name)
     results = []
     with open(filename, 'r') as f:
         data = json.load(f)
-        for d in data["data"]:
+        for i, d in enumerate(data["data"]):
+            # pbar.set_description(pbar_description + f" text {i}/{len(data['data'])}")
             result = try_detect(watermark_detector, d["generated"])
             result.update({f"generated_{k}": v for k, v in data["model_params"].items()})
             result.update({f"detected_{k}": v for k, v in parameters.items()})
@@ -136,33 +110,45 @@ def detect_file(filename, parameters):
     return results
 
 
-def detect(filename, configurations):
+def detect(filename, configurations, model_name, watermark_str):
     """"Returns list with detection results"""
 
     detection_results = []
     for parameters in configurations:
-        file_results = detect_file(filename, parameters)
+        file_results = detect_file(filename, parameters, model_name, watermark_str)
         detection_results.append(file_results)
 
     return flatten_list(detection_results)
 
 
-def get_files_to_parse(data_dir):
+def get_files_to_parse(data_dir, args):
     for file in os.listdir(data_dir):
 
         # Skip not specified model name
-        if args.model_name is not None and args.model_name not in file:
+        if (
+                args.model_name not in file
+                and args.watermark_name not in file
+        ):
             continue
 
         yield file
 
 
 def process_file(file):
+    print(f"{os.getpid()}: Processing file: {file}")
+    valid_model_names = {
+        'BUT-FIT-csmpt7b': 'BUT-FIT/csmpt7b',
+        'meta-llama-Llama-3.1-8B': 'meta-llama/Llama-3.1-8B',
+    }
+
     # pbar.set_description(f"Detecting watermark in {file[-50:]}")
 
-    configurations = get_configurations(file, data_dir)
+    lang, model_name, watermark_str, *_ = file.split("~")
+    model_name = valid_model_names[model_name]
+
+    configurations = get_configurations(data_dir, lang, watermark_str)
     in_file = os.path.join(data_dir, file)
-    get_out = detect(in_file, configurations)
+    get_out = detect(in_file, configurations, model_name, watermark_str)
 
     out_file = os.path.join("data/output", f"{args.data_dir}_detected", file)
     if not os.path.exists(os.path.dirname(out_file)):
@@ -176,7 +162,7 @@ if __name__ == '__main__':
     args = get_args()
 
     data_dir = os.path.join("data/output", args.data_dir)
-    files_to_parse = get_files_to_parse(data_dir)
+    files_to_parse = get_files_to_parse(data_dir, args)
 
     with Pool() as pool:
         pool.map(process_file, files_to_parse)

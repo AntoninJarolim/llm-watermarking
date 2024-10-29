@@ -148,9 +148,6 @@ def detect(filename, configurations):
 
 def get_files_to_parse(data_dir):
     for file in os.listdir(data_dir):
-        # Skip GumbelWatermarkedLLM since it is not working correctly yet
-        if "GumbelWatermarkedLLM" in file:
-            continue
 
         # Skip not specified model name
         if args.model_name is not None and args.model_name not in file:

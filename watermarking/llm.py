@@ -131,7 +131,7 @@ class UnigramWatermarkedLLM(LLM):
 class GumbelNGramWatermarkedLLM(LLM):
     def __init__(
             self,
-            seed=69,
+            seed=None,
             shift_max=0,
             ngram=1,
             tau=0.4,
@@ -142,7 +142,7 @@ class GumbelNGramWatermarkedLLM(LLM):
             **kwargs,
     ):
         super().__init__(device=device, **kwargs)
-        self.seed = seed
+        self.seed = seed if seed is not None else np.random.SeedSequence().entropy
         self.seeding = seeding
         self.hash_key = hash_key
         self.ngram = ngram

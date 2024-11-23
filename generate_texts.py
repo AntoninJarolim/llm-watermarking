@@ -120,7 +120,7 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
-    taus = [0.3, 0.2]
+    taus = [0.3]
     top_p = 0.9
     ngram = 3
     repeats = range(10)

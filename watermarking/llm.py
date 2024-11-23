@@ -9,7 +9,7 @@ from . import utils
 
 
 class LLM:
-    def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
+    def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0, **kwargs):
         self.out_cache = None
         self.device = device
         self.name = model_name
@@ -34,6 +34,9 @@ class LLM:
         for param in self.model.parameters():
             param.requires_grad = False
         self.pad_token_id = self.tokenizer.pad_token_id
+
+        if kwargs:
+            print(f"Warning: Unused kwargs: {kwargs}")
 
     def watermark_config(self):
         return {

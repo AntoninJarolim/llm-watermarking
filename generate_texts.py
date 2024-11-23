@@ -54,6 +54,17 @@ def generate_batch(text_batch, output_dict, model, max_length):
     return batch_gen_tokens
 
 
+def check_doesnt_exist(output_file):
+    if os.path.exists(output_file):
+        i = 1
+        while os.path.exists(output_file):
+            replace = f"~repeat_{i}"
+            output_file = output_file.replace(".json", f"{replace}.json")
+            i += 1
+        print(f"File {output_file} already exists. Appending a '{replace}' to the filename.")
+    return output_file
+
+
 def generate_texts(model, data_path, output_path, max_length, lang, batch_size, param_dict, unique_id=None):
     unique_id = now_time_str if unique_id is None else unique_id
     model_params = model.watermark_config()
@@ -63,6 +74,7 @@ def generate_texts(model, data_path, output_path, max_length, lang, batch_size, 
         output_path,
         f"{lang}~{model_name}~{class_name}~{unique_id}.json"
     )
+    output_file = check_doesnt_exist(output_file)
     output_dict = {
         "model_params": model_params,
         "run_params": param_dict,
@@ -106,8 +118,8 @@ if __name__ == "__main__":
     model_classes = [
         # GumbelWatermarkedLLM,
         # UnigramWatermarkedLLM,
-        GumbelNGramWatermarkedLLM,
         # LLM,
+        GumbelNGramWatermarkedLLM,
     ]
     model_names = (
         ["meta-llama/Llama-3.1-8B", "BUT-FIT/csmpt7b"]
@@ -120,26 +132,32 @@ if __name__ == "__main__":
         else [args.lang]
     )
 
+    temp = 1.2
+    top_ps = [0.9]
     taus = [0.3]
     top_p = 0.9
     ngram = 3
-    repeats = range(10)
+    tau = 0.3
+
+    repeats = range(5)
 
     for model_class in model_classes:
         for model_name in model_names:
             for lang in langs:
                 for tau in taus:
-                    for i in repeats:
+                    for repeat in repeats:
                         model = model_class(
                             model_name=model_name,
                             device=device,
                             top_p=top_p,
                             tau=tau,
-                            ngram=ngram
+                            ngram=ngram,
+                            temperature=temp
                         )
 
                         run_dict = {
                             'top_p': top_p,
+                            'temperature': temp,
                             'batch_size': args.batch_size,
                             'max_length': args.max_length,
                             'time': (now_time_str := datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
@@ -152,7 +170,7 @@ if __name__ == "__main__":
                             lang,
                             args.batch_size,
                             run_dict,
-                            unique_id=f"repeat_{i}~tau_{tau}"
+                            unique_id=f"top_p_{top_p}~repeat_{repeat}"
                         )
                         del model
 

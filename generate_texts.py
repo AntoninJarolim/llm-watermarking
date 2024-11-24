@@ -41,12 +41,12 @@ def get_args():
 
 
 def generate_batch(text_batch, output_dict, model, max_length):
-    generated_texts = model.generate_text(text_batch, max_length=max_length)
+    generated_texts, entropies = model.generate_text(text_batch, max_length=max_length)
     batch_gen_tokens = 0
-    for in_text, out_text in zip(text_batch, generated_texts):
+    for in_text, out_text, entropy in zip(text_batch, generated_texts, entropies):
         out_text = out_text[len(in_text):]  # Strip prefix from the generated text
         output_dict["data"].append(
-            {"prompt": in_text, "generated": out_text}
+            {"prompt": in_text, "generated": out_text, "entropy": entropy}
         )
 
         text_gen_tokens = len(out_text)

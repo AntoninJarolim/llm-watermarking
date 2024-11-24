@@ -3,7 +3,7 @@ from pprint import pprint
 import torch
 
 from watermarking.detectors import UnigramWatermarkDetector
-from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM
+from watermarking.llm import LLM, UnigramWatermarkedLLM, GumbelWatermarkedLLM, GumbelNGramWatermarkedLLM
 import argparse
 
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         "První defenestrace v Praze se odehrála v roce",
     ]
 
-    texts = llm_model.generate_text(
+    texts, entropy = llm_model.generate_text(
         prompts,
         max_length=args.max_length,
     )
@@ -48,14 +48,12 @@ if __name__ == "__main__":
             model_name=args.model_name, device=device, wm_strength=0.5, top_p=0.9
         )
     elif args.watermark_name == "gumbel":
-        llm_model_w = GumbelWatermarkedLLM(
-            model_name=args.model_name, device=device, top_p=0.9
-        )
+        llm_model_w = GumbelWatermarkedLLM(model_name=args.model_name, device=device)
     else:
         raise ValueError(
             f"Unknown watermark name: {args.watermark_name}, choose from 'unigram' or 'gumbel'"
         )
-    texts_w = llm_model_w.generate_text(prompts, max_length=args.max_length)
+    texts_w, entropy_w = llm_model_w.generate_text(prompts, max_length=args.max_length)
 
     for x, x_w in zip(texts, texts_w):
         if args.watermark_name == "unigram":

@@ -2,6 +2,23 @@ import torch
 import numpy as np
 
 
+def calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_input_length):
+    """ Calculate entropy of the generated text using joint probability of tokens """
+    joint_probs = torch.stack(next_token_probs_list, dim=1)
+    entropies = []
+    for i in range(joint_probs.size(0)):
+        probs = joint_probs[i].reshape(-1)
+        tokens_to_skip = input_lengths[i] - min_input_length
+        probs = probs[tokens_to_skip:]
+        mask = pad_mask[i][(tokens_to_skip + min_input_length):]
+        probs = probs[~mask]
+        log_probs = torch.log(probs + 1e-10).reshape(-1)
+        entropy = -torch.sum(probs * log_probs)
+        entropies.append(entropy.item())
+
+    return entropies
+
+
 def inv_gumbel_cdf_np(x, mu=0, beta=1, eps=1e-20):
     return mu - beta * np.log(-np.log(x + eps))
 

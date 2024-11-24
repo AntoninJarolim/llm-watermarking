@@ -80,31 +80,45 @@ class LLM:
         if pad_to_shortest:
             input_tokens[:, min_prompt_len:] = self.pad_token_id
 
+        next_token_probs_list = []
+        input_lengths = []
+        for tokens in input_tokens:
+            # Filter out [PAD] tokens
+            input_lengths.append(len(tokens[tokens != self.pad_token_id]))
         prev_pos = 0
         for current_position in tqdm(
                 range(min_prompt_len, max_length), disable=disable_tqdm
+
         ):
             next_token_logits = self.next_token_logits(
                 input_tokens, current_position, prev_pos
             )
             next_token_logits = next_token_logits[:, -1, :]  # Only the last token of each sequence
-            next_token_ids = self.select_next_token(next_token_logits)
+            next_token_ids, next_token_probs = self.select_next_token(next_token_logits)
+            next_token_probs_list.append(next_token_probs)
 
             # Replace only [PAD] tokens
             pad_mask = (input_tokens[:, current_position] == self.pad_token_id)
             input_tokens[:, current_position][pad_mask] = next_token_ids[pad_mask]
 
             prev_pos = current_position
-        return self.decode_output(input_tokens)
+
+        pad_mask = (input_tokens == self.pad_token_id)
+        entropies = utils.calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_prompt_len)
+        return self.decode_output(input_tokens), entropies
 
     def select_next_token(self, next_token_logits):
         if self.temperature > 0:
             probs = utils.top_p(next_token_logits, self.temperature, self.top_p, self.device)
             next_token = torch.multinomial(probs, num_samples=1).flatten()
+            next_token_probs = torch.gather(probs, -1, next_token.unsqueeze(-1))
         else:
             next_token = torch.argmax(next_token_logits, dim=-1)
+            next_token_probs = torch.gather(
+                torch.softmax(next_token_logits, dim=-1), -1, next_token.unsqueeze(-1)
+            )
 
-        return next_token
+        return next_token, next_token_probs
 
 
 class UnigramWatermarkedLLM(LLM):
@@ -181,15 +195,23 @@ class GumbelNGramWatermarkedLLM(LLM):
                 next_token = torch.multinomial(
                     torch.softmax((probs.log() + xis) / self.tau, dim=-1), num_samples=1
                 )
+                next_token_probs = torch.gather(torch.softmax((probs.log() + xis) / self.tau, dim=-1), -1, next_token)
             else:
                 if np.random.rand() < self.drop_prob:
                     next_token = torch.multinomial(probs, num_samples=1)
+                    next_token_probs = torch.gather(probs, -1, next_token)
                 else:
                     next_token = torch.argmax(probs.log() + xis, dim=-1, keepdim=True)
+                    next_token_probs = torch.gather(
+                        torch.softmax((probs.log() + xis), dim=-1), -1, next_token
+                    )
         else:
             next_token = torch.argmax(logits, dim=-1)
+            next_token_probs = torch.gather(
+                torch.softmax(logits, dim=-1), -1, next_token.unsqueeze(-1)
+            )
         next_token = next_token.reshape(-1)
-        return next_token
+        return next_token, next_token_probs
 
     def get_seed_rng(self, input_pds):
         seed = self.seed
@@ -197,6 +219,12 @@ class GumbelNGramWatermarkedLLM(LLM):
             seed = (seed * self.hash_key + i.item()) % (2 ** 64 - 1)
 
         return seed
+
+    def select_next_token(self, next_token_logits, ngram, uid):
+        xi = self._key_func(uid, ngram)
+        next_token, next_token_probs = self._gamma(xi, next_token_logits)
+        return next_token, next_token_probs
+
 
     def generate_text(
             self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True
@@ -217,6 +245,11 @@ class GumbelNGramWatermarkedLLM(LLM):
 
         unique_id = self._get_unique_id(input_tokens.size(0))
         prev_pos = 0
+        next_token_probs_list = []
+        input_lengths = []
+        for tokens in input_tokens:
+            # Filter out [PAD] tokens
+            input_lengths.append(len(tokens[tokens != self.pad_token_id]))
         for current_position in tqdm(
                 range(min_prompt_len, max_length), disable=disable_tqdm
         ):
@@ -225,20 +258,19 @@ class GumbelNGramWatermarkedLLM(LLM):
                 input_tokens, current_position, prev_pos
             )
             next_token_logits = next_token_logits[:, -1, :]
-            next_token_ids = self.select_next_token(
+            next_token_ids, next_token_probs = self.select_next_token(
                 next_token_logits, n_gram, unique_id
             )
+            next_token_probs_list.append(next_token_probs)
 
             pad_mask = input_tokens[:, current_position] == self.pad_token_id
             input_tokens[:, current_position][pad_mask] = next_token_ids[pad_mask]
 
             prev_pos = current_position
-        return self.decode_output(input_tokens)
 
-    def select_next_token(self, next_token_logits, ngram, uid):
-        xi = self._key_func(uid, ngram)
-        next_token = self._gamma(xi, next_token_logits)
-        return next_token
+        pad_mask = (input_tokens == self.pad_token_id)
+        entropies = utils.calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_prompt_len)
+        return self.decode_output(input_tokens), entropies
 
     def watermark_config(self):
         return {

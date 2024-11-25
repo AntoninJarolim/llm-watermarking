@@ -13,7 +13,7 @@ def calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_input_
         mask = pad_mask[i][(tokens_to_skip + min_input_length):]
         probs = probs[~mask]
         log_probs = torch.log(probs + 1e-10).reshape(-1)
-        entropy = -torch.sum(probs * log_probs)
+        entropy = -torch.sum(log_probs)
         entropies.append(entropy.item())
 
     return entropies

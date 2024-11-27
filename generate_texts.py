@@ -1,6 +1,6 @@
 import argparse
 import datetime
-from asyncio import sleep
+from time import sleep
 from itertools import product
 
 import torch
@@ -218,23 +218,16 @@ def get_unique_id(model_params, output_file_args):
     return "~".join([f"{arg}_{model_params[arg]}" for arg in output_file_args])
 
 
-def main():
-    args = get_args()
-
-    device = "cuda:0" if torch.cuda.is_available and not args.force_cpu else "cpu"
-    model_classes = parse_model_classes(args.class_model_names)
-
-    # Soft run
+def generate_data(model_classes, args, device, soft_run=False):
     for model_class, model_name in product(model_classes, args.model_names):
         model_param_lists = get_model_param_list(model_class, args)
         for model_params in model_param_lists:
             print(f"Generating {model_class.__name__} ({model_name}) with {model_params}")
             print(f"With unique id: {get_unique_id(model_params, args.output_file_args)}")
+            if soft_run:
+                print()
+                continue
 
-    sleep(5)
-    for model_class, model_name in product(model_classes, args.model_names):
-        model_param_lists = get_model_param_list(model_class, args)
-        for model_params in model_param_lists:
             model = model_class(model_name=model_name, device=device, **model_params)
 
             run_dict = {
@@ -256,6 +249,15 @@ def main():
 
             if args.try_upload:
                 os.system("./upload_data.sh")
+
+def main():
+    args = get_args()
+
+    device = "cuda:0" if torch.cuda.is_available and not args.force_cpu else "cpu"
+    model_classes = parse_model_classes(args.class_model_names)
+
+    generate_data(model_classes, args, device, soft_run=True)
+    generate_data(model_classes, args, device, soft_run=False)
 
 
 if __name__ == "__main__":

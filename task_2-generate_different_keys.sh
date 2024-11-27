@@ -1,5 +1,4 @@
 
-conda deactivate && conda activate llm
 # download upload data script
 cp ~/watermark_data/upload_data.sh .
 
@@ -18,10 +17,11 @@ BATCH_SIZE=8
 MAX_LENGTH=512
 TRY_UPLOAD="--try_upload"
 LANGUAGE="english"
-INPUT_FILE="data_500_lines.jsonl"
-OUTPUT_DIR="./data/output/different_models"
+INPUT_FILE="data_10_lines.jsonl"
+OUTPUT_DIR="./data/output/different_models_test"
 CLASS_MODELS="GumbelNGramWatermarkedLLM UnigramWatermarkedLLM"
-MODEL_NAMES="meta-llama/Llama-3.1-8B"
+MODEL_NAMES="meta-llama/Llama-3.1-8B meta-llama/Llama-3.2-3B mistralai/Ministral-8B-Instruct-2410 mistralai/Mistral-Small-Instruct-2409"
+# 8B, 3B, 8B, 24B
 
 # Loop to run the command multiple times
 for _ in {1..5}; do
@@ -32,12 +32,12 @@ for _ in {1..5}; do
     --lang $LANGUAGE \
     --in_data_name $INPUT_FILE \
     --output_path $OUTPUT_DIR \
-    --class_model_names "$CLASS_MODELS" \
+    --class_model_names $CLASS_MODELS \
     --model_names $MODEL_NAMES
 done
 
 
-python detecting_watermark.py --data_dir different_models --watermark_name GumbelNGramWatermarkedLLM
+python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM
 
-python detecting_watermark.py --data_dir different_models --watermark_name UnigramWatermarkedLLM
+python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM
 

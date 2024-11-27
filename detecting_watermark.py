@@ -113,8 +113,10 @@ def detect_file(filename, parameters, model_name, watermark_str):
 def detect(filename, configurations, model_name, watermark_str):
     """"Returns list with detection results"""
 
+    print(f"Detecting {filename} with configurations {configurations}")
+
     detection_results = []
-    for parameters in tqdm(configurations, desc=f"Detecting {filename} with config."):
+    for parameters in tqdm(configurations, desc=f"Detecting {filename}"):
         file_results = detect_file(filename, parameters, model_name, watermark_str)
         detection_results.append(file_results)
 

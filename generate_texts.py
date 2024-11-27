@@ -219,6 +219,9 @@ def get_unique_id(model_params, output_file_args):
 
 
 def generate_data(model_classes, args, device, soft_run=False):
+    if soft_run:
+        print("This is soft run!")
+
     for model_class, model_name in product(model_classes, args.model_names):
         model_param_lists = get_model_param_list(model_class, args)
         for model_params in model_param_lists:

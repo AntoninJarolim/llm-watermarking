@@ -114,7 +114,7 @@ def detect(filename, configurations, model_name, watermark_str):
     """"Returns list with detection results"""
 
     detection_results = []
-    for parameters in configurations:
+    for parameters in tqdm(configurations, desc=f"Detecting {filename} with config."):
         file_results = detect_file(filename, parameters, model_name, watermark_str)
         detection_results.append(file_results)
 

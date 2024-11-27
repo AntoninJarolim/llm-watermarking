@@ -41,7 +41,15 @@ def get_args():
 
 
 def generate_batch(text_batch, output_dict, model, max_length):
-    generated_texts, entropies = model.generate_text(text_batch, max_length=max_length)
+    try:
+        generated_texts, entropies = model.generate_text(text_batch, max_length=max_length)
+    except RuntimeError as e:
+        # seed generating function based on n-gram has a small chance to generate number > 2^63
+        # which causes pytorch to raise RuntimeError in method Generator.manual_seed()
+        print(f"Warning: Runtime Error occured: {e}")
+        generated_texts = text_batch # Nothing was generated
+        entropies = [None for _ in range(len(text_batch))]
+
     batch_gen_tokens = 0
     for in_text, out_text, entropy in zip(text_batch, generated_texts, entropies):
         out_text = out_text[len(in_text):]  # Strip prefix from the generated text

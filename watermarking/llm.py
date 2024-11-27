@@ -268,7 +268,12 @@ class GumbelNGramWatermarkedLLM(LLM):
 
             prev_pos = current_position
 
-        pad_mask = (input_tokens == self.pad_token_id)
+        # fill [PAD] tokens after first [EOS] token
+        eos_positions = torch.argwhere(input_tokens == self.tokenizer.eos_token_id)
+        for batch_id, pos in eos_positions:
+            input_tokens[batch_id, pos:] = self.tokenizer.pad_token_id
+
+        pad_mask = input_tokens == self.pad_token_id
         entropies = utils.calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_prompt_len)
         return self.decode_output(input_tokens), entropies
 

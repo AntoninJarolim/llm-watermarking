@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # download upload data script
 cp ~/watermark_data/upload_data.sh .

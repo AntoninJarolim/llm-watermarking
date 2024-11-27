@@ -1,3 +1,4 @@
+#!/bin/bash
 
 conda deactivate && conda activate llm
 # download upload data script

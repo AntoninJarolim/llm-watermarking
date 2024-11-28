@@ -49,6 +49,7 @@ class LLM:
         return self.tokenizer(
             texts,
             truncation=True,
+            padding_side="right",
             padding='max_length',
             max_length=max_length,
             return_tensors="pt").input_ids.to(self.device)

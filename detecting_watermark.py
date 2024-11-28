@@ -12,6 +12,7 @@ from watermarking.utils import flatten_list
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--disable_multiprocessing", action="store_true", help="Disable multiprocessing")
     parser.add_argument('--data_dir', type=str, default=None,
                         help="Directory with data located in 'data/output' directory")
     parser.add_argument('--model_name', type=str, default=None,
@@ -169,5 +170,9 @@ if __name__ == '__main__':
     data_dir = os.path.join("data/output", args.data_dir)
     files_to_parse = get_files_to_parse(data_dir, args)
 
-    with Pool() as pool:
-        pool.map(process_file, files_to_parse)
+    if args.disable_multiprocessing:
+        for file_to_parse in files_to_parse:
+            process_file(file_to_parse)
+    else:
+        with Pool() as pool:
+            pool.map(process_file, files_to_parse)

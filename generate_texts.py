@@ -108,6 +108,7 @@ def parse_model_classes(model_strings):
             if model_string == available_model_class.__name__:
                 parsed_classes.append(available_model_class)
 
+    assert parsed_classes != [], f"None of {model_strings} matches with any of available models"
     return parsed_classes
 
 

@@ -1,4 +1,5 @@
 import argparse
+import inspect
 import json
 import os
 import transformers
@@ -45,24 +46,17 @@ def init_tokenizer(model_name):
 
 def get_watermark_detector(params, watermark_str, model_name):
     tokenizer, vocab_size = init_tokenizer(model_name)
-    detector_params = params.copy()
-    detector_params["tokenizer"] = tokenizer
-    detector_params["vocab_size"] = vocab_size
-
-    if watermark_str == "GumbelWatermarkedLLM":
-        return GumbelDetector(**detector_params)
-    elif watermark_str == "UnigramWatermarkedLLM":
-        # wm_strength is not used for detection
-        if "wm_strength" in params:
-            del detector_params["wm_strength"]
-        return UnigramWatermarkDetector(**detector_params)
-    elif watermark_str == "GumbelNGramWatermarkedLLM":
-        for param_name in  ['class_name', 'model_name', 'seeding', 'tau', 'drop_prob']:
-            if param_name in params:
-                del detector_params[param_name]
-        return GumbelNGramDetector(**detector_params)
-    else:
-        raise ValueError(f"Invalid watermark type: {watermark_str}")
+    available_detectors = {
+        'UnigramWatermarkedLLM': UnigramWatermarkDetector,
+        'GumbelWatermarkedLLM': GumbelDetector,
+        'GumbelNGramWatermarkedLLM': GumbelNGramDetector,
+    }
+    detector_class = available_detectors[watermark_str]
+    init_params = inspect.signature(detector_class.__init__).parameters
+    filtered_params = {key: value
+                       for key, value in params.items()
+                       if key in init_params}
+    return detector_class(tokenizer, vocab_size, **filtered_params)
 
 
 def get_configurations(data_dir, lang, watermark_str):

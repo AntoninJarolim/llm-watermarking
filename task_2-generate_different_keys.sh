@@ -22,11 +22,12 @@ INPUT_FILE="data_10_lines.jsonl"
 OUTPUT_DIR="./data/output/different_models_test"
 CLASS_MODELS="GumbelNGramWatermarkedLLM UnigramWatermarkedLLM"
 MODEL_NAMES="
+ google/gemma-2-9b-it
+ google/gemma-2-2b-it
  meta-llama/Llama-3.1-8B
+ meta-llama/Llama-3.2-3B
  mistralai/Ministral-8B-Instruct-2410
- meta-llama/Llama-3.2-3B"
-#  mistralai/Mistral-Small-Instruct-2409"
-# 8B, 3B, 8B, 24B
+ mistralai/Mistral-7B-v0.3"
 
 # Loop to run the command multiple times
 python generate_texts.py \
@@ -43,5 +44,4 @@ python generate_texts.py \
 
 python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM --model_name ""
 
-python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM --model_name ""
-
+python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM --model_name "" 

@@ -138,7 +138,7 @@ def get_args():
     # All models arguments
     parser.add_argument("--temperatures", nargs='+', default=[1.2], help="Temperature values.")
     parser.add_argument("--top_ps", nargs='+', default=[0.9], help="Top-p values.")
-    parser.add_argument("--seed", default=None,
+    parser.add_argument("--seed", default=None, type=int,
                         help="Seed to use. If not specified, random seed is generated for each instance.")
 
     # GumbelSoftmax arguments

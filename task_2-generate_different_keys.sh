@@ -24,8 +24,8 @@ CLASS_MODELS="GumbelNGramWatermarkedLLM UnigramWatermarkedLLM"
 MODEL_NAMES="
  meta-llama/Llama-3.1-8B
  mistralai/Ministral-8B-Instruct-2410
- mistralai/Mistral-Small-Instruct-2409
  meta-llama/Llama-3.2-3B"
+#  mistralai/Mistral-Small-Instruct-2409"
 # 8B, 3B, 8B, 24B
 
 # Loop to run the command multiple times
@@ -37,10 +37,11 @@ python generate_texts.py \
   --in_data_name $INPUT_FILE \
   --output_path $OUTPUT_DIR \
   --class_model_names $CLASS_MODELS \
-  --model_names $MODEL_NAMES
+  --model_names $MODEL_NAMES \
+  --seed 1615453454534154
 
 
-python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM
+python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM --model_name ""
 
-python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM
+python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM --model_name ""
 

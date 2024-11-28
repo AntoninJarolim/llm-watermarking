@@ -8,6 +8,9 @@ import numpy as np
 from . import utils
 
 
+class LanguageGenerationError(Exception):
+    pass
+
 class LLM:
     def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
         self.out_cache = None
@@ -175,7 +178,10 @@ class GumbelNGramWatermarkedLLM(LLM):
         batched_xis = []
         for i in range(batch_size):
             seed = self.get_seed_rng(ngram[i])
-            self.rng.manual_seed(seed)
+            try:
+                self.rng.manual_seed(seed)
+            except RuntimeError:
+                raise LanguageGenerationError()
             xi = torch.rand(self.vocab_size, generator=self.rng)
             xi = utils.inv_gumbel_cdf(xi)
             xi = xi.roll(-r[i])

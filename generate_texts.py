@@ -14,6 +14,7 @@ from watermarking.llm import (
     UnigramWatermarkedLLM,
     GumbelWatermarkedLLM,
     GumbelNGramWatermarkedLLM,
+    LanguageGenerationError,
 )
 from watermarking.utils import count_lines
 
@@ -21,7 +22,7 @@ from watermarking.utils import count_lines
 def generate_batch(text_batch, output_dict, model, max_length):
     try:
         generated_texts, entropies = model.generate_text(text_batch, max_length=max_length)
-    except RuntimeError as e:
+    except LanguageGenerationError as e:
         # seed generating function based on n-gram has a small chance to generate number > 2^63
         # which causes pytorch to raise RuntimeError in method Generator.manual_seed()
         print(f"Warning: Runtime Error occured: {e}")

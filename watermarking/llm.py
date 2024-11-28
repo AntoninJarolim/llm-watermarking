@@ -120,10 +120,10 @@ class LLM:
 
 
 class UnigramWatermarkedLLM(LLM):
-    def __init__(self, device="cpu", green_list_size=0.5, wm_strength=2, watermark_key=None, **kwargs):
+    def __init__(self, device="cpu", green_list_size=0.5, wm_strength=2, seed=None, **kwargs):
         super().__init__(device=device, **kwargs)
         self.wm_strength = wm_strength
-        self.watermark_key = watermark_key if watermark_key is not None else np.random.SeedSequence().entropy
+        self.watermark_key = seed if seed is not None else np.random.SeedSequence().entropy
         self.green_list = utils.split_vocab(green_list_size, self.vocab_size, self.watermark_key, device)
         self.green_list_size = green_list_size
 

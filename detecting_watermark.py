@@ -141,6 +141,9 @@ def process_file(file):
     valid_model_names = {
         'BUT-FIT-csmpt7b': 'BUT-FIT/csmpt7b',
         'meta-llama-Llama-3.1-8B': 'meta-llama/Llama-3.1-8B',
+        'mistralai-Ministral-8B-Instruct-2410': 'mistralai/Ministral-8B-Instruct-2410',
+        'mistralai-Mistral-Small-Instruct-2409': 'mistralai/Mistral-Small-Instruct-2409',
+        'meta-llama-Llama-3.2-3B': 'meta-llama/Llama-3.2-3B',
     }
 
     # pbar.set_description(f"Detecting watermark in {file[-50:]}")

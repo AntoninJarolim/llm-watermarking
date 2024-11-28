@@ -21,21 +21,23 @@ LANGUAGE="english"
 INPUT_FILE="data_10_lines.jsonl"
 OUTPUT_DIR="./data/output/different_models_test"
 CLASS_MODELS="GumbelNGramWatermarkedLLM UnigramWatermarkedLLM"
-MODEL_NAMES="meta-llama/Llama-3.1-8B meta-llama/Llama-3.2-3B mistralai/Ministral-8B-Instruct-2410 mistralai/Mistral-Small-Instruct-2409"
+MODEL_NAMES="
+ meta-llama/Llama-3.1-8B
+ mistralai/Ministral-8B-Instruct-2410
+ mistralai/Mistral-Small-Instruct-2409
+ meta-llama/Llama-3.2-3B"
 # 8B, 3B, 8B, 24B
 
 # Loop to run the command multiple times
-for _ in {1..5}; do
-  python generate_texts.py \
-    --batch_size $BATCH_SIZE \
-    --max_length $MAX_LENGTH \
-    $TRY_UPLOAD \
-    --lang $LANGUAGE \
-    --in_data_name $INPUT_FILE \
-    --output_path $OUTPUT_DIR \
-    --class_model_names $CLASS_MODELS \
-    --model_names $MODEL_NAMES
-done
+python generate_texts.py \
+  --batch_size $BATCH_SIZE \
+  --max_length $MAX_LENGTH \
+  $TRY_UPLOAD \
+  --lang $LANGUAGE \
+  --in_data_name $INPUT_FILE \
+  --output_path $OUTPUT_DIR \
+  --class_model_names $CLASS_MODELS \
+  --model_names $MODEL_NAMES
 
 
 python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM

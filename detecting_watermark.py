@@ -131,20 +131,22 @@ def get_files_to_parse(data_dir, args):
         yield file
 
 
+def convert_model_name(model_name):
+    valid_hface_prefixes = ['BUT-FIT', 'meta-llama', 'mistralai', 'google']
+    for valid_hface_prefix in valid_hface_prefixes:
+        if valid_hface_prefix in model_name:
+            return f"{valid_hface_prefix}/{model_name.strip(valid_hface_prefix + '-')}"
+    raise ValueError(
+        f"Model name '{model_name}' does not match with any specified prefixes {valid_hface_prefixes}"
+    )
+
 def process_file(file):
     print(f"{os.getpid()}: Processing file: {file}")
-    valid_model_names = {
-        'BUT-FIT-csmpt7b': 'BUT-FIT/csmpt7b',
-        'meta-llama-Llama-3.1-8B': 'meta-llama/Llama-3.1-8B',
-        'mistralai-Ministral-8B-Instruct-2410': 'mistralai/Ministral-8B-Instruct-2410',
-        'mistralai-Mistral-Small-Instruct-2409': 'mistralai/Mistral-Small-Instruct-2409',
-        'meta-llama-Llama-3.2-3B': 'meta-llama/Llama-3.2-3B',
-    }
 
     # pbar.set_description(f"Detecting watermark in {file[-50:]}")
 
     lang, model_name, watermark_str, *_ = file.split("~")
-    model_name = valid_model_names[model_name]
+    model_name = convert_model_name(model_name)
 
     configurations = get_configurations(data_dir, lang, watermark_str)
     in_file = os.path.join(data_dir, file)

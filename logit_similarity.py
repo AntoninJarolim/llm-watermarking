@@ -17,6 +17,7 @@ def get_args():
     parser.add_argument("--max_length", type=int, default=150)
     parser.add_argument("--input_file", type=str, default="data.jsonl")
     parser.add_argument("--output_file", type=str, default="logits.bin")
+    parser.add_argument("--save_every", type=int, default=100)
     return parser.parse_args()
 
 
@@ -30,6 +31,7 @@ if __name__ == '__main__':
 
     logits = []
     processed_lines = 0
+    files_created = 0
     with open(args.input_file, "r") as f:
         for line in f:
             line = json.loads(line)
@@ -39,10 +41,9 @@ if __name__ == '__main__':
             logits.extend(flat_logits)
             processed_lines += 1
 
-            if processed_lines % 100 == 0:
-                print(f"Processed {processed_lines} lines")
-
-    logits = torch.stack(logits, dim=0)
-
-    with open(args.output_file, "wb") as f:
-        pickle.dump(logits, f)
+            if processed_lines % args.save_every == 0:
+                logits = torch.stack(logits, dim=0)
+                print(f"Processed {processed_lines} lines and saving to {args.output_file}_{files_created}.bin")
+                with open(f"{args.output_file}_{files_created}.bin", "wb") as f:
+                    pickle.dump(logits, f)
+                logits = []

@@ -109,6 +109,27 @@ class LLM:
         entropies = utils.calc_text_entropy(next_token_probs_list, pad_mask, input_lengths, min_prompt_len)
         return self.decode_output(input_tokens), entropies
 
+    def generate_texts_and_logits(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
+        input_tokens = self.tokenize_input(texts, max_length)
+
+        logits_list = []
+        for i in range(len(texts)):
+            input_length = len(input_tokens[i][input_tokens[i] != self.pad_token_id])
+            prev_pos = 0
+            for j in range(input_length, max_length):
+                next_token_logits = self.next_token_logits(
+                    input_tokens[i].unsqueeze(0), j, prev_pos=prev_pos
+                )
+                next_token_logits = next_token_logits[:,-1, :]
+                logits_list.append(next_token_logits)
+                next_token_id, _ = self.select_next_token(next_token_logits)
+                input_tokens[i, j] = next_token_id
+                prev_pos = j
+                if next_token_id == self.tokenizer.eos_token_id:
+                    break
+
+        return None, logits_list
+
     def select_next_token(self, next_token_logits):
         if self.temperature > 0:
             probs = utils.top_p(next_token_logits, self.temperature, self.top_p, self.device)

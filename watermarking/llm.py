@@ -4,6 +4,7 @@ import transformers
 import torch
 from tqdm.auto import tqdm
 import numpy as np
+from transformers import DynamicCache
 
 from . import utils
 
@@ -13,6 +14,7 @@ class LanguageGenerationError(Exception):
 
 class LLM:
     def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
+        self.last_output = None
         self.out_cache = None
         self.device = device
         self.name = model_name
@@ -64,12 +66,13 @@ class LLM:
         return self.tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
 
     def next_token_logits(self, input_tokens, current_position, prev_pos):
-        self.out_cache = self.model.forward(
+        self.last_output = self.model.forward(
             input_tokens[:, prev_pos:current_position],
             use_cache=True,
-            past_key_values=self.out_cache.past_key_values if prev_pos > 0 else None
+            past_key_values=self.out_cache if prev_pos > 0 else None
         )
-        return self.out_cache.logits
+        self.out_cache = DynamicCache(self.last_output.past_key_values)
+        return self.last_output.logits
 
     def generate_text(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
         input_tokens = self.tokenize_input(texts, max_length)

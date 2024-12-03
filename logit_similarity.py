@@ -43,7 +43,9 @@ if __name__ == '__main__':
 
             if processed_lines % args.save_every == 0:
                 logits = torch.stack(logits, dim=0)
-                print(f"Processed {processed_lines} lines and saving to {args.output_file}_{files_created}.bin")
-                with open(f"{args.output_file}_{files_created}.bin", "wb") as f:
+                outfile = f"{args.output_file}_{files_created}.bin"
+                files_created += 1
+                print(f"Processed {processed_lines} lines and saving to {outfile}")
+                with open(outfile, "wb") as f:
                     pickle.dump(logits, f)
                 logits = []

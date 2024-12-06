@@ -135,7 +135,7 @@ def convert_model_name(model_name):
     valid_hface_prefixes = ['BUT-FIT', 'meta-llama', 'mistralai', 'google']
     for valid_hface_prefix in valid_hface_prefixes:
         if valid_hface_prefix in model_name:
-            return f"{valid_hface_prefix}/{model_name.strip(valid_hface_prefix + '-')}"
+            return f"{valid_hface_prefix}/{model_name.removeprefix(valid_hface_prefix + '-')}"
     raise ValueError(
         f"Model name '{model_name}' does not match with any specified prefixes {valid_hface_prefixes}"
     )

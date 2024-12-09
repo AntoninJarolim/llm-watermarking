@@ -91,8 +91,15 @@ def try_detect(watermark_detector, text):
     }
 
 
-def detect_file(filename, parameters, model_name, watermark_str):
-    watermark_detector = get_watermark_detector(parameters, watermark_str, model_name)
+def detect_file(filename, detect_parameters, model_name, watermark_str):
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        model_name, trust_remote_code=True
+    )
+    watermark_detector = get_watermark_detector(
+        detect_parameters,
+        watermark_str,
+        detect_parameters['model_name']
+    )
     results = []
     with open(filename, 'r') as f:
         data = json.load(f)
@@ -100,7 +107,13 @@ def detect_file(filename, parameters, model_name, watermark_str):
             # pbar.set_description(pbar_description + f" text {i}/{len(data['data'])}")
             result = try_detect(watermark_detector, d["generated"])
             result.update({f"generated_{k}": v for k, v in data["model_params"].items()})
-            result.update({f"detected_{k}": v for k, v in parameters.items()})
+            result.update({f"detected_{k}": v for k, v in detect_parameters.items()})
+            result['generated_token_len'] = len(
+                tokenizer.encode(
+                    d["generated"],
+                    add_special_tokens=False
+                )
+            )
             results.append(result)
     return results
 
@@ -139,6 +152,7 @@ def convert_model_name(model_name):
     raise ValueError(
         f"Model name '{model_name}' does not match with any specified prefixes {valid_hface_prefixes}"
     )
+
 
 def process_file(file):
     print(f"{os.getpid()}: Processing file: {file}")

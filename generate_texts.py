@@ -138,7 +138,7 @@ def get_args():
                         help="Language of the texts to generate. ")
 
     # All models arguments
-    parser.add_argument("--temperatures", nargs='+', default=[1.2], help="Temperature values.")
+    parser.add_argument("--temperatures", nargs='+', default=[1.2], type=float, help="Temperature values.")
     parser.add_argument("--top_ps", nargs='+', default=[0.9], help="Top-p values.")
     parser.add_argument("--seed", default=None, type=int,
                         help="Seed to use. If not specified, random seed is generated for each instance.")
@@ -190,13 +190,13 @@ def get_model_param_list(model_class, args):
     model_args = {
         'temperatures': args.temperatures,
         'top_ps': args.top_ps,
-        'seed': args.seed,
     }
     if model_class is UnigramWatermarkedLLM:
         model_args.update(
             {
                 'green_list_sizes': args.green_list_sizes,
                 'wm_strengths': args.wm_strengths,
+                'seed': args.seed,
             }
         )
     elif model_class is GumbelNGramWatermarkedLLM:
@@ -204,8 +204,11 @@ def get_model_param_list(model_class, args):
             {
                 'taus': args.taus,
                 'ngrams': args.ngrams,
+                'seed': args.seed,
             }
         )
+    elif model_class is LLM:
+        pass  # Nothing to do here
     else:
         raise AssertionError("Incorrect model string name.")
 
@@ -238,6 +241,8 @@ def generate_data(model_classes, args, device, soft_run=False):
             run_dict = {
                 'batch_size': args.batch_size,
                 'max_length': args.max_length,
+                'temperature': model_params['temperature'],
+                'top_p': model_params['top_p'],
                 'time': datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
             }
             generate_texts(

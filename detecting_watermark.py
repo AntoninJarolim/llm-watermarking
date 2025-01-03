@@ -92,9 +92,7 @@ def try_detect(watermark_detector, text):
 
 
 def detect_file(filename, detect_parameters, model_name, watermark_str):
-    tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_name, trust_remote_code=True
-    )
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     watermark_detector = get_watermark_detector(
         detect_parameters,
         watermark_str,

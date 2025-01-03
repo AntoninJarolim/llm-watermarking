@@ -18,8 +18,8 @@ BATCH_SIZE=8
 MAX_LENGTH=512
 TRY_UPLOAD="--try_upload"
 LANGUAGE="english"
-INPUT_FILE="data_10_lines.jsonl"
-OUTPUT_DIR="./data/output/different_models_test"
+INPUT_FILE="data.jsonl"
+OUTPUT_DIR="./data/output/different_models"
 CLASS_MODELS="GumbelNGramWatermarkedLLM UnigramWatermarkedLLM"
 MODEL_NAMES="
  google/gemma-2-9b-it
@@ -29,7 +29,6 @@ MODEL_NAMES="
  mistralai/Ministral-8B-Instruct-2410
  mistralai/Mistral-7B-v0.3"
 
-# Loop to run the command multiple times
 python generate_texts.py \
   --batch_size $BATCH_SIZE \
   --max_length $MAX_LENGTH \
@@ -42,6 +41,5 @@ python generate_texts.py \
   --seed 1615453454534154
 
 
-python detecting_watermark.py --data_dir different_models_test --watermark_name GumbelNGramWatermarkedLLM --model_name ""
-
-python detecting_watermark.py --data_dir different_models_test --watermark_name UnigramWatermarkedLLM --model_name "" 
+# python detecting_watermark.py --data_dir different_models --watermark_name GumbelNGramWatermarkedLLM --model_name ""
+# python detecting_watermark.py --data_dir different_models --watermark_name UnigramWatermarkedLLM --model_name "" 

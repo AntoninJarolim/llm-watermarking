@@ -4,7 +4,7 @@ import transformers
 import torch
 from tqdm.auto import tqdm
 import numpy as np
-from transformers import DynamicCache
+from transformers import HybridCache, Gemma2ForCausalLM
 
 from . import utils
 
@@ -14,8 +14,7 @@ class LanguageGenerationError(Exception):
 
 class LLM:
     def __init__(self, model_name=None, device="cpu", temperature=1.0, top_p=1.0):
-        self.last_output = None
-        self.out_cache = None
+        self.past_key_values = None
         self.device = device
         self.name = model_name
         self.temperature = temperature
@@ -66,15 +65,27 @@ class LLM:
         return self.tokenizer.batch_decode(output_tokens, skip_special_tokens=True)
 
     def next_token_logits(self, input_tokens, current_position, prev_pos):
-        self.last_output = self.model.forward(
-            input_tokens[:, prev_pos:current_position],
+        output = self.model.forward(
+            input_ids=input_tokens[:, prev_pos:current_position],
             use_cache=True,
-            past_key_values=self.out_cache if prev_pos > 0 else None
+            past_key_values=self.past_key_values,
         )
-        self.out_cache = DynamicCache(self.last_output.past_key_values)
-        return self.last_output.logits
+        self.past_key_values = output.past_key_values
+        return output.logits
+
+    def init_cache(self, max_length, batch_size):
+        self.past_key_values = HybridCache(
+            config=self.model.config,
+            batch_size=batch_size,
+            max_cache_len=max_length,
+            device=self.model.device,
+            dtype=self.model.dtype
+        )
 
     def generate_text(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
+        if type(self.model) is Gemma2ForCausalLM:
+            self.init_cache(max_length, len(texts))
+
         input_tokens = self.tokenize_input(texts, max_length)
         # assert torch.all(input_tokens[:, -1] == self.pad_token_id), "Input text too long"
 
@@ -113,6 +124,9 @@ class LLM:
         return self.decode_output(input_tokens), entropies
 
     def generate_texts_and_logits(self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True):
+        if type(self.model) is Gemma2ForCausalLM:
+            self.init_cache(max_length, len(texts))
+
         input_tokens = self.tokenize_input(texts, max_length)
 
         logits_list = []
@@ -258,6 +272,9 @@ class GumbelNGramWatermarkedLLM(LLM):
     def generate_text(
             self, texts, max_length=700, pad_to_shortest=False, disable_tqdm=True
     ):
+        if type(self.model) is Gemma2ForCausalLM:
+            self.init_cache(max_length, len(texts))
+
         input_tokens = self.tokenize_input(texts, max_length)
         # assert torch.all(input_tokens[:, -1] == self.pad_token_id), "Input text too long"
 
